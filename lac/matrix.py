@@ -72,13 +72,13 @@ class Matrix:
     @property
     def num_columns(self) -> int:
         ## homework:start
-        return
+        return len(self[0])
         ## homework:end
 
     @property
     def num_rows(self) -> int:
         ## homework:start
-        return
+        return len(self._rowvectors)
         ## homework:end
 
     @property
@@ -89,23 +89,22 @@ class Matrix:
     def T(self) -> Matrix:
         if not hasattr(self, "_T"):
             ## homework:start
-            self._T = 
+            self._T = Matrix.make_zero(self.num_columns,self.num_rows)
+            for i in range(len(self)):
+                for j in range(0,self.num_columns):
+                    self._T[j,i]=self[i,j]
             ## homework:end
         return self._T
 
     @property
     def determinant(self) -> float:
-        if not hasattr(self, "_det"):
-            ## homework:start
-            self._det = 
-            ## homework:end
-        return self._det
+        return determinante(self)     
 
     @property
     def inverse(self) -> Matrix:
         if not hasattr(self, "_inverse"):
             ## homework:start
-            self._inverse = 
+            self._inverse = self
             ## homework:end
         return self._inverse
 
@@ -113,7 +112,14 @@ class Matrix:
     def trace(self) -> float:
         if not hasattr(self, "_trace"):
             ## homework:start
-            self_trace = 
+            if self.num_columns==self.num_rows:
+                self._trace=0
+                for i in range(len(self)):
+                    for j in range(self.num_columns):
+                        if i == j:
+                            self._trace+=self[i,j]
+            else:
+                raise RuntimeError("Error: La matriz no es cuadrada")
             ## homework:end
         return self._trace
 
@@ -130,27 +136,27 @@ class Matrix:
 
     def __matmul__(self, other: Matrix) -> Matrix:
         ## homework:start
-        return 
+        return matrix_multiply(self,other)
         ## homework:end
 
     def __add__(self, other: Matrix) -> Matrix:
         ## homework:start
-        return
+        return add(self, other)
         ## homework:end
 
     def __rmul__(self, k: t.Union[int, float]) -> Matrix:
         ## homework:start
-        return
+        return scale(self,k)
         ## homework:end
 
     def __neg__(self) -> Matrix:
         ## homework:start
-        return
+        return scale(self, -1)
         ## homework:end
 
     def __sub__(self, other: Matrix) -> Matrix:
         ## homework:start
-        return
+        return subtract(self, other)
         ## homework:end
 
     def __iter__(self):
@@ -257,23 +263,26 @@ def _make_identity_rowvectors(num_rows, num_columns):
 def scale(m: Matrix, k: t.Union[int, float]) -> Matrix:
     """Scale matrix m by k. """
     ## homework:start
-    output_matrix = 
+    output_matrix1= m
+    for i in range(0,m.num_rows):
+        for j in range(0,m.num_columns):
+            output_matrix1[i,j]=m[i,j]*k
     ## homework:end
-    return output_matrix
+    return output_matrix1
 
 
 def add(m1: Matrix, m2: Matrix) -> Matrix:
     """Adds two matrices. """
     ## homework:start
-    output_matrix = 
+    output_matrix1 = Matrix([i+j for i,j in zip(m1,m2)])
     ## homework:end
-    return output_matrix
+    return output_matrix1
 
 
 def subtract(m1: Matrix, m2: Matrix) -> Matrix:
     """Substracts the second matrix from the first one. """
     ## homework:start
-    output_matrix = 
+    output_matrix = Matrix([i-j for i,j in zip(m1,m2)])
     ## homework:end
     return output_matrix
 
@@ -286,9 +295,14 @@ def vector_multiply(m: Matrix, v: Vector, from_left: bool = False) -> Vector:
         raise ValueError(f"Shape mismatch: m({m.shape}), v({v.dim})")
 
     ## homework:start
-    output_vector = 
+    output_vector = []
+    mp=0
+    for i in m:
+        for k in range(len(i)):
+            mp+=i[k]*v[k]
+        output_vector.append(mp)
     ## homework:end
-    return output_vector
+    return Vector(output_vector)
 
 
 def matrix_multiply(m1: Matrix, m2: Matrix) -> Matrix:
@@ -312,7 +326,13 @@ def matrix_multiply(m1: Matrix, m2: Matrix) -> Matrix:
         )
         raise ValueError(msg.format(m1.num_columns, m2.num_rows))
     ## homework:start
-    output_matrix = 
+    output_matrix = Matrix.make_zero(m1.num_rows,m2.num_columns)
+    for i in range(0,m1.num_rows):
+        for j in range(0,m2.num_columns):
+            mp=0
+            for k in range(0,m1.num_columns):
+                mp+=(m1[i,k]*m2[k,j])
+            output_matrix[i,j] = mp
     ## homework:end
     return output_matrix
 
@@ -344,3 +364,30 @@ def eigenvalues(mat: Matrix) -> t.List[t.Union[int, float]]:
 
 def eigenvectors(mat: Matrix) -> t.List[Vector]:
     raise NotImplementedError
+
+def determinante(self) -> float:
+    #if not hasattr(self, "_det"):
+        ## homework:start
+        m = [list(self[i]) for i in range(len(self))]
+        valor_determinante = 0
+        i_fil = range(len(m))
+
+        if len(m) != len(m[0]):
+            raise ValueError("Error: La matriz no es cuadrada")
+
+        if len(m) == 2 and len(m[0]) == 2:
+            valor_determinante = m[0][0]*m[1][1] - m[1][0]*m[0][1]
+            return valor_determinante
+
+        for i in i_fil:
+            copia_m=copy.deepcopy(m)
+            copia_m=copia_m[1:]
+            fil=len(copia_m)
+            for j in range(fil):
+                copia_m[j] = copia_m[j][0:i] + copia_m[j][i+1:]
+
+            signo = (-1) ** (i % 2)
+            determinante_inferior = determinante(copia_m)
+            valor_determinante += signo * m[0][i] * determinante_inferior
+        ## homework:end
+        return valor_determinante

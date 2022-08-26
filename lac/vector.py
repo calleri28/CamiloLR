@@ -39,39 +39,51 @@ class Vector:
     def norm(self) -> float:
         if not hasattr(self, "_norm"):
             ## homework:start
-            self._norm =
+            self._norm = math.sqrt(sum(i**2 for i in self))
             ## homework:end
+        else:
+            pass
         return self._norm
 
     @property
     def dim(self) -> int:
         ## homework:start
-        return
+        cont=0
+        for i in self:
+            cont+=1
+        return cont
         ## homework:end
 
     def __add__(self, other: Vector) -> Vector:
         ## homework:start
-        return
+        return add(self, other)
         ## homework:end
+    
+    def __rmul__(self, k: t.Union[int,float]) -> Vector:
+       return scale(self,k)
+
+    def __matmul__(v1:Vector, v2:Vector) -> Vector:
+       return dot(v1,v2)
 
     def __neg__(self) -> Vector:
         ## homework:start
-        return
+        output_vector = scale(self, -1)
+        return output_vector
         ## homework:end
 
     def __sub__(self, other: Vector) -> Vector:
         ## homework:start
-        return
+        return subtract(self, other)
         ## homework:end
 
     def __abs__(self):
         ## homework:start
-        return
+        return self.norm
         ## homework:end
 
     def __len__(self):
         ## homework:start
-        return
+        return self.dim
         ## homework:end
 
     def __eq__(self, other):
@@ -128,7 +140,7 @@ def scale(v: Vector, k: t.Union[int, float]) -> Vector:
         raise TypeError(msg.format(type(k)))
 
     ## homework:start
-    output_vector = 
+    output_vector = Vector(e*k for e in v)
     ## homework:end
     return output_vector
 
@@ -144,7 +156,7 @@ def add(v1: Vector, v2: Vector) -> Vector:
         raise ValueError(msg.format(v1.dim, v2.dim))
 
     ## homework:start
-    output_vector =
+    output_vector = Vector(a+b for a,b in zip(v1,v2))
     ## homework:end
     return output_vector
 
@@ -152,7 +164,7 @@ def add(v1: Vector, v2: Vector) -> Vector:
 def subtract(v1: Vector, v2: Vector) -> Vector:
     """Subtracts the second vector from the first vector. """
     ## homework:start
-    output_vector =
+    output_vector = Vector(a-b for a,b in zip(v1,v2))
     ## homework:end
     return output_vector
 
@@ -168,7 +180,11 @@ def dot(v1: Vector, v2: Vector) -> float:
         msg = "vectors must have the same dimension, got {} and {}"
         raise ValueError(msg.format(v1.dim, v2.dim))
     ## homework:start
-    output_value =
+    sum=0
+    x = (a*b for a,b in zip(v1,v2))
+    for i in x:
+        sum += i
+    output_value = sum
     ## homework:end
     return output_value
 
@@ -176,7 +192,9 @@ def dot(v1: Vector, v2: Vector) -> float:
 def angle_between(v1: Vector, v2: Vector) -> float:
     """Computes the angle between two vectors. """
     ## homework:start
-    alpha =
+    aux = dot(v1, v2)/(v1.norm*v2.norm)
+    aux = max(min(aux,1),-1)
+    alpha = math.acos(aux)
     ## homework:end
     return alpha
 
@@ -193,7 +211,10 @@ def cross(v1: Vector, v2: Vector) -> Vector:
             raise ValueError(msg.format(v.dim))
 
     ## homework:start
-    output_vector =
+    aux1=v1[1]*v2[2] - v1[2]*v2[1]
+    aux2=v1[0]*v2[2] - v1[2]*v2[0]
+    aux3=v1[0]*v2[1] - v1[1]*v2[0]
+    output_vector = Vector([aux1,-aux2,aux3])
     ## homework:end
     return output_vector
 
@@ -201,7 +222,7 @@ def cross(v1: Vector, v2: Vector) -> Vector:
 def build_unit_vector(v: Vector) -> Vector:
     """Builds a unit vector from the provided vector. """
     ## homework:start
-    unit_vector =
+    unit_vector = scale(v,(1/v.norm))
     ## homework:end
     return unit_vector
 
@@ -217,7 +238,9 @@ def project(v: Vector, d: Vector) -> Vector:
         Vector: the projection of v onto d.
     """
     ## homework:start
-    projection_vector = 
+    num = dot (v,d)
+    den = d.norm**2
+    projection_vector = scale(d,(num/dem))
     ## homework:end
     return projection_vector
 
