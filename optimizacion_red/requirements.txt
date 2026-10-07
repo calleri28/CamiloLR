@@ -1,0 +1,4 @@
+pandas>=2.0
+numpy>=1.24
+pulp>=2.7,<3        # PuLP 3+/4 cambió la API; 2.x trae el solver CBC incluido
+openpyxl>=3.1       # solo si se leen extractos .xlsx

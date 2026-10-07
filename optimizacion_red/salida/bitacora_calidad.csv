@@ -1,0 +1,16 @@
+regla,descripcion,accion,registros,toneladas,importe
+R01,Importe con formato texto (separadores de miles/decimales),Corregido: convertido a número,4521,31987.469399999998,3964846545.4
+R02,Tipo de movimiento / centro con espacios o minúsculas,Corregido: trim + mayúsculas,5662,39636.88,4971824811.8
+R03,"Movimientos distintos a XI (ventas, devoluciones, otros)",Excluido: fuera de alcance,8251,58939.7353,7179112125.0
+R04,Registros duplicados (documento + posición),Excluido,738,5050.252800000001,743335232.2
+R05,Fecha nula o fuera de rango,Excluido,114,766.0862000000001,107836573.0
+R06,Cantidad negativa o cero (reversión / anulación),Excluido,245,1701.4533999999999,185949021.0
+R07,Centro origen/destino no existe en el maestro,Excluido,105,799.1809,99095973.0
+R08,Origen igual a destino,Excluido,142,862.445,104194604.0
+R09,Peso faltante,Corregido: cantidad × kg/unidad del maestro de materiales,1079,7986.31138,906790674.7
+R10,"Importe de flete en 0, 1 peso o vacío",Excluido del cálculo de tarifa (el volumen sí cuenta para demanda),2453,17821.51985,1234.5
+R11,Costo COP/kg atípico en la ruta (IQR × 3.0 sobre log),Excluido del cálculo de tarifa,561,3717.50662,2924695459.2999997
+R12,Registro sin número de viaje,Se conserva; no puede enriquecerse con TMS,1068,7764.357869999999,891650753.0999999
+R13,Km del TMS incoherente con la distancia de la ruta,Corregido: se usa km teórico,288,2176.57156,252833782.89999998
+R14,Km del TMS en cero o vacío,Corregido: se usa km teórico,564,4263.422509999999,555963509.0
+R15,Viaje SAP sin match en TMS,"Se conserva SAP; km teórico, sin dato de vehículo",5110,37230.261009999995,4471323653.3
