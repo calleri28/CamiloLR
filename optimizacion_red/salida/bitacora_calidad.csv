@@ -1,16 +1,42 @@
-regla,descripcion,accion,registros,toneladas,importe
-R01,Importe con formato texto (separadores de miles/decimales),Corregido: convertido a número,4521,31987.469399999998,3964846545.4
-R02,Tipo de movimiento / centro con espacios o minúsculas,Corregido: trim + mayúsculas,5662,39636.88,4971824811.8
-R03,"Movimientos distintos a XI (ventas, devoluciones, otros)",Excluido: fuera de alcance,8251,58939.7353,7179112125.0
-R04,Registros duplicados (documento + posición),Excluido,738,5050.252800000001,743335232.2
-R05,Fecha nula o fuera de rango,Excluido,114,766.0862000000001,107836573.0
-R06,Cantidad negativa o cero (reversión / anulación),Excluido,245,1701.4533999999999,185949021.0
-R07,Centro origen/destino no existe en el maestro,Excluido,105,799.1809,99095973.0
-R08,Origen igual a destino,Excluido,142,862.445,104194604.0
-R09,Peso faltante,Corregido: cantidad × kg/unidad del maestro de materiales,1079,7986.31138,906790674.7
-R10,"Importe de flete en 0, 1 peso o vacío",Excluido del cálculo de tarifa (el volumen sí cuenta para demanda),2453,17821.51985,1234.5
-R11,Costo COP/kg atípico en la ruta (IQR × 3.0 sobre log),Excluido del cálculo de tarifa,561,3717.50662,2924695459.2999997
-R12,Registro sin número de viaje,Se conserva; no puede enriquecerse con TMS,1068,7764.357869999999,891650753.0999999
-R13,Km del TMS incoherente con la distancia de la ruta,Corregido: se usa km teórico,288,2176.57156,252833782.89999998
-R14,Km del TMS en cero o vacío,Corregido: se usa km teórico,564,4263.422509999999,555963509.0
-R15,Viaje SAP sin match en TMS,"Se conserva SAP; km teórico, sin dato de vehículo",5110,37230.261009999995,4471323653.3
+﻿tabla;regla;descripcion;accion;registros;volumen_m3;importe
+Clientes;C01;Longitud positiva (signo perdido);Corregido: se cambia el signo;2;0,0;0,0
+Clientes;C02;Cliente sin coordenadas;Se completa con la ciudad de otros clientes / nodos;2;0,0;0,0
+Clientes;C03;Coordenadas fuera de Colombia (exportación u error);"Se conserva; se marca como internacional";0;0,0;0,0
+Nodos;N01;ID_Nodo duplicado;Excluido (se conserva el primero);0;0,0;0,0
+Nodos;N02;Longitud positiva (en Colombia es negativa);Corregido: se cambia el signo;1;0,0;0,0
+Nodos;N03;Nodo sin coordenadas;Corregido con la ubicación de clientes de la misma ciudad;1;0,0;0,0
+Nodos;N04;Coordenadas inválidas tras corrección;Nodo excluido del modelo (revisar maestro);0;0,0;0,0
+Nodos;N05;Nodos que no son planta ni CEDI (maquiladores, proveedores);Informativo: no entran a la red;1;0,0;0,0
+Homologación;H01;Código homologado a un ID_Nodo que no existe en el maestro;Ese código no se podrá usar;0;0,0;0,0
+Referencias;RF01;Cod_Ref duplicado;Excluido (se conserva el primero);1;0,0;0,0
+Referencias;RF02;Volumen_Caja_m3 vacío o inconsistente con largo × ancho × alto (p. ej. en cm³);Corregido: se recalcula con las dimensiones;2;0,0;0,0
+Referencias;RF03;Trasladada sin planta nueva válida (vacía, igual a la anterior o inexistente);No se usa para el plan de traslado;2;0,0;0,0
+Referencias;RF04;Descontinuada con planta nueva diligenciada;Se ignora la planta nueva;1;0,0;0,0
+Referencias;RF05;Referencia sustituta que no existe en el maestro;Se trata como descontinuada sin sustituta;0;0,0;0,0
+Referencias;RF06;Control_Consistencia = OK pero la regla detecta inconsistencia;Informativo: revisar el control;3;0,0;0,0
+Referencias;RF07;Referencia de la planta que cierra marcada «Sin cambio»;"Informativo: su volumen igual debe reasignarse; el modelo lo absorbe";1;0,0;0,0
+Info_CEDI;IC02;Registro de Info_CEDI con ID_Nodo inexistente;Excluido;0;0,0;0,0
+SAP;S01;IMPORTE SAP o Volumen en texto (separadores de miles, notación científica);Corregido: convertido a número;4415;584975,449;3194339116,5
+SAP;S02;Tipo, centros o población con espacios, minúsculas o tildes (BOGOTÁ/BOGOTA);Corregido: mayúsculas sin tildes;2428;465921,677;1745002808,4
+SAP;S03;Movimientos distintos a XI (AU: 4650, Z5: 382);Excluido: fuera de alcance (no es traslado primario);5032;597005,7660000001;1049803162,2
+SAP;S04;Registros duplicados (todas las columnas iguales);Excluido;695;188671,71399999998;535695391,0
+SAP;S05;Periodo vacío o fuera de rango;Excluido;104;1953,855;77539338,0
+SAP;S06;Cantidad negativa o cero (reversión / anulación);Excluido;216;64794,661;186615424,3
+SAP;S07;Centro productor o CEDI sin homologación en el maestro de nodos (CO99);Excluido: agregue el código a homologacion_centros.csv;106;1949,4819999999997;77567201,0
+SAP;S08;Centro productor igual al CEDI destino;Excluido;40;710,691;24964891,0
+SAP;S09;Destino XI que no es CEDI en el maestro de nodos;Excluido;0;0,0;0,0
+SAP;S10;Referencia que no existe en el maestro de referencias;Se conserva con la Unidad Negocio de SAP;168;3312,232;137058444,7
+SAP;S11;Unidad Negocio vacía;Corregido con la Familia del maestro de referencias;682;85716,576;502405510,9
+SAP;S12;Unidad Negocio distinta a la Familia del maestro;Se usa la familia del maestro;0;0,0;0,0
+SAP;S13;Sin familia (ni en SAP ni en maestro);Excluido;6;40,839;749067,0
+SAP;S14;Volumen vacío o en cero;Corregido: Cantidad × Volumen_Caja_m3 del maestro (o mediana de la familia);1032;18890,1145242275;816149460,3
+SAP;S15;"Volumen inconsistente con Cantidad × Volumen_Caja_m3 (fuera de 0.5–2.0×; p. ej. en litros)";Corregido con el volumen teórico del maestro;308;5656,37646021;237688745,6
+SAP;S16;Volumen no recuperable;Excluido;0;0,0;0,0
+SAP;S17;Centro productor distinto a Planta_Produccion_Antes del maestro;Informativo (se usa SAP);0;0,0;0,0
+SAP;S18;IMPORTE SAP en 0, 1 peso o vacío;Excluido del cálculo de tarifa (el volumen sí cuenta para demanda);2744;49113,87688592;1362,5
+SAP;S19;COP/m3 atípico dentro de la ruta (dígito de más, viaje casi vacío);Excluido del cálculo de tarifa;692;9866,940728250001;2293788486,0
+SAP;S20;Registro sin número de viaje;"Se conserva; no puede cruzarse con TMS";1017;18379,225655759998;710029651,7
+SAP;S21;Cliente de distribución (no XI) que no cruza con el maestro de clientes por nombre + ciudad;Informativo: el campo Cliente se separa en nombre y ciudad por « - »;336;0,0;0,0
+TMS;T01;Km del TMS incoherente con la distancia de la ruta;Corregido: se usa km teórico;453;6319,71330579;239437227,1
+TMS;T02;Km del TMS en cero o vacío;Corregido: se usa km teórico;617;10552,909177640002;392836051,6
+TMS;T03;Viaje SAP sin match en TMS;"Se conserva SAP; km teórico, sin dato de vehículo";4991;92160,03293596001;3920488914,5

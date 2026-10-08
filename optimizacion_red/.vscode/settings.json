@@ -1,0 +1,5 @@
+{
+  "python.terminal.activateEnvironment": true,
+  "files.encoding": "utf8",
+  "files.associations": { "*.csv": "plaintext" }
+}

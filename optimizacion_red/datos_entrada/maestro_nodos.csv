@@ -1,0 +1,18 @@
+﻿ID_Nodo;Nombre_Nodo;Tipo_Nodo;Estado;Fecha_Inicio_Operacion;Fecha_Cierre;Modalidad;Direccion;Ciudad;Departamento;Latitud;Longitud;Observaciones
+PL01;Planta Tocancipá;Planta;Activo;2012-01-01;;Propio;;Tocancipá;Cundinamarca;4,96500;-73,91300;
+PL02;Planta Yumbo;Planta;Activo;2012-01-01;2026-12-31;Propio;;Yumbo;Valle del Cauca;3,58500;-76,49500;"Cierre programado; producción se traslada según maestro de referencias"
+PL03;Planta Rionegro;Planta;Activo;2012-01-01;;Propio;;Rionegro;Antioquia;6,15500;-75,37400;
+PL04;Planta Malambo;Planta;Activo;2012-01-01;;Propio;;Malambo;Atlántico;10,85900;-74,77300;
+CD01;CEDI Funza;Centro de distribución propio;Activo;2012-01-01;;Arrendado;;Bogotá;Bogotá D.C.;4,71100;-74,07200;
+CD02;CEDI Itagüí;Centro de distribución propio;Activo;2012-01-01;;Arrendado;;Medellín;Antioquia;6,24400;-75,58100;
+CD03;CEDI Acopi;Centro de distribución propio;Activo;2012-01-01;;Arrendado;;Cali;Valle del Cauca;3,45200;-76,53200;
+CD04;CEDI Barranquilla;Centro de distribución propio;Activo;2012-01-01;;Arrendado;;Barranquilla;Atlántico;10,96400;-74,79600;
+CD05;CEDI Girón;Centro de distribución propio;Activo;2012-01-01;;Arrendado;;Bucaramanga;Santander;7,11900;-73,12200;
+CD06;CEDI Dosquebradas;Centro de distribución propio;Activo;2012-01-01;;Arrendado;;Pereira;Risaralda;4,81300;-75,69600;
+CD07;CEDI Mamonal;Centro tercerizado;Activo;2012-01-01;;3PL;;Cartagena;Bolívar;10,39100;75,47900;
+CD08;CEDI Villavicencio;Centro de distribución propio;Activo;2012-01-01;;Arrendado;;Villavicencio;Meta;4,14200;-73,62600;
+CD09;CEDI Pasto;Centro de distribución propio;Activo;2012-01-01;;Arrendado;;Pasto;Nariño;1,21300;-77,28100;
+CD10;CEDI Neiva;Centro tercerizado;Activo;2012-01-01;;3PL;;Neiva;Huila;2,92700;-75,28100;
+CD11;CEDI Ibagué;Centro de distribución propio;Activo;2012-01-01;;Arrendado;;Ibagué;Tolima;;;
+CD12;CEDI Montería;Centro de distribución propio;Activo;2012-01-01;;Arrendado;;Montería;Córdoba;8,74800;-75,88100;
+MQ01;Maquilador Andino;Maquilador/Proveedor;Activo;2020-01-01;;Tercero;;Bogotá;Bogotá D.C.;4,65000;-74,10000;Capacidad de maquila

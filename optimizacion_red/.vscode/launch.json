@@ -1,0 +1,23 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "1. Ejecutar modelo (datos_entrada)",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}/modelo_red.py",
+      "args": ["--abrir"],
+      "cwd": "${workspaceFolder}",
+      "console": "integratedTerminal"
+    },
+    {
+      "name": "2. Regenerar datos de prueba y ejecutar",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}/modelo_red.py",
+      "args": ["--generar-prueba", "--abrir"],
+      "cwd": "${workspaceFolder}",
+      "console": "integratedTerminal"
+    }
+  ]
+}
