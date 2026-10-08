@@ -55,6 +55,19 @@ pip install -r requirements.txt
 - Al quedar activo, la terminal muestra `(.venv)` al inicio de la línea.
 - Luego seleccione el intérprete: `Ctrl+Shift+P` → **Python: Select Interpreter** → elija el que dice `.venv`.
 
+### PC corporativo (políticas de TI, OneDrive, proxy)
+
+- **El `.venv` no se copia entre computadores.** Guarda rutas absolutas del Python del equipo donde se creó. Si copió la carpeta desde otro PC, borre `.venv`; `ejecutar_modelo.bat` lo detecta y lo recrea solo.
+- **Ubicación de la carpeta.** El código está en la carpeta interna `optimizacion_red`, la que contiene `modelo_red.py` y `requirements.txt`. Si descomprimió el ZIP, puede quedar dentro de otra carpeta con el nombre del ZIP. Abra en VS Code y ejecute desde la carpeta interna.
+- **Sin PowerShell.** Use `ejecutar_modelo.bat` con doble clic, o cambie la terminal de VS Code a *Command Prompt* (flecha ˅ junto al «+» → Command Prompt) y use `.venv\Scripts\activate.bat`. CMD no está sujeto a la política de ejecución de scripts.
+- **OneDrive.** Funciona, pero sincronizar las miles de librerías del `.venv` es lento y puede bloquear archivos. Es preferible una carpeta local, como `C:\Proyectos\optimizacion_red`. Otra opción es pausar la sincronización mientras instala.
+- **Proxy corporativo o inspección SSL.** Si `pip` falla con `SSLError`, `ProxyError` o `timed out`:
+  ```
+  .venv\Scripts\python.exe -m pip install -r requirements.txt --trusted-host pypi.org --trusted-host files.pythonhosted.org
+  .venv\Scripts\python.exe -m pip install -r requirements.txt --proxy http://USUARIO:CLAVE@proxy.empresa.com:8080
+  ```
+  (TI le da la dirección del proxy). Si la empresa tiene Anaconda instalado, puede usar *Anaconda Prompt*, que ya trae pandas y numpy: `pip install pulp<3 openpyxl` y luego `python modelo_red.py --abrir`.
+
 ### Paso 5. Ejecutar el modelo
 
 Tiene tres formas de hacerlo:
