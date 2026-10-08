@@ -46,8 +46,12 @@ py -m venv .venv
 pip install -r requirements.txt
 ```
 
-- Si PowerShell bloquea `Activate.ps1` («la ejecución de scripts está deshabilitada»), ejecute una vez
-  `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned`, responda `S` y repita la activación.
+- Si PowerShell bloquea `Activate.ps1` («la ejecución de scripts está deshabilitada en este sistema»), tiene tres salidas. Ninguna requiere permisos de administrador:
+  1. **Habilitar solo para esa terminal**: `Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass` y repetir `.venv\Scripts\Activate.ps1`. Hay que repetirlo cada vez que abra una terminal nueva.
+  2. **Habilitar para su usuario**: `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned` (responda `S`). Puede estar bloqueado por políticas de la empresa.
+  3. **No activar el entorno**: use su Python directamente.
+     `.venv\Scripts\python.exe -m pip install -r requirements.txt` y luego `.venv\Scripts\python.exe modelo_red.py --abrir`.
+     El archivo `ejecutar_modelo.bat` y el botón F5 funcionan así, sin activar nada.
 - Al quedar activo, la terminal muestra `(.venv)` al inicio de la línea.
 - Luego seleccione el intérprete: `Ctrl+Shift+P` → **Python: Select Interpreter** → elija el que dice `.venv`.
 
