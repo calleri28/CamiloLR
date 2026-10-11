@@ -16,27 +16,29 @@ Referencias;RF05;Referencia sustituta que no existe en el maestro;Se trata como 
 Referencias;RF06;Control_Consistencia = OK pero la regla detecta inconsistencia;Informativo: revisar el control;3;0,0;0,0
 Referencias;RF07;Referencia de la planta que cierra marcada «Sin cambio»;"Informativo: su volumen igual debe reasignarse; el modelo lo absorbe";1;0,0;0,0
 Info_CEDI;IC02;Registro de Info_CEDI con ID_Nodo inexistente;Excluido;0;0,0;0,0
-SAP;S01;IMPORTE SAP o Volumen en texto (separadores de miles, notación científica);Corregido: convertido a número;4415;584975,449;3194339116,5
-SAP;S02;Tipo, centros o población con espacios, minúsculas o tildes (BOGOTÁ/BOGOTA);Corregido: mayúsculas sin tildes;2428;465921,677;1745002808,4
-SAP;S03;Movimientos distintos a XI (AU: 4650, Z5: 382);Excluido: fuera de alcance (no es traslado primario);5032;597005,7660000001;1049803162,2
-SAP;S04;Registros duplicados (todas las columnas iguales);Excluido;695;188671,71399999998;535695391,0
-SAP;S05;Periodo vacío o fuera de rango;Excluido;104;1953,855;77539338,0
-SAP;S06;Cantidad negativa o cero (reversión / anulación);Excluido;216;64794,661;186615424,3
-SAP;S07;Centro productor o CEDI sin homologación en el maestro de nodos (CO99);Excluido: agregue el código a homologacion_centros.csv;106;1949,4819999999997;77567201,0
-SAP;S08;Centro productor igual al CEDI destino;Excluido;40;710,691;24964891,0
+SAP;S01;IMPORTE SAP o Volumen en texto (separadores de miles, notación científica);Corregido: convertido a número;3220;482842,402;2525332857,3
+SAP;S02;Tipo, centros o población con espacios, minúsculas o tildes (BOGOTÁ/BOGOTA);Corregido: mayúsculas sin tildes;2045;286924,8599999999;1169901869,9
+SAP;S03;Movimientos distintos a XI (AU: 4789, Z5: 405);Excluido: fuera de alcance (no es traslado primario);5194;392242,142;1151413150,1000001
+SAP;S04;Registros duplicados (todas las columnas iguales);Excluido;713;320080,786;406318204,7
+SAP;S05;Periodo vacío o fuera de rango;Excluido;108;20502,181;61697064,0
+SAP;S06;Cantidad negativa o cero (reversión / anulación);Excluido;206;25977,760000000002;112127083,4
+SAP;S07;Centro productor o CEDI sin homologación en el maestro de nodos (CO99);Excluido: agregue el código a homologacion_centros.csv;102;11289,676000000001;94608002,0
+SAP;S08;Centro productor igual al CEDI destino;Excluido;40;854,1890000000001;26765153,1
 SAP;S09;Destino XI que no es CEDI en el maestro de nodos;Excluido;0;0,0;0,0
-SAP;S10;Referencia que no existe en el maestro de referencias;Se conserva con la Unidad Negocio de SAP;168;3312,232;137058444,7
-SAP;S11;Unidad Negocio vacía;Corregido con la Familia del maestro de referencias;682;85716,576;502405510,9
+SAP;S10;Referencia que no existe en el maestro de referencias;Se conserva con la Unidad Negocio de SAP;168;13621,946;82688393,0
+SAP;S11;Unidad Negocio vacía;Corregido con la Familia del maestro de referencias;691;155187,203;412361065,1
 SAP;S12;Unidad Negocio distinta a la Familia del maestro;Se usa la familia del maestro;0;0,0;0,0
-SAP;S13;Sin familia (ni en SAP ni en maestro);Excluido;6;40,839;749067,0
-SAP;S14;Volumen vacío o en cero;Corregido: Cantidad × Volumen_Caja_m3 del maestro (o mediana de la familia);1032;18890,1145242275;816149460,3
-SAP;S15;"Volumen inconsistente con Cantidad × Volumen_Caja_m3 (fuera de 0.5–2.0×; p. ej. en litros)";Corregido con el volumen teórico del maestro;308;5656,37646021;237688745,6
+SAP;S13;Sin familia (ni en SAP ni en maestro);Excluido;3;49,368;791886,0
+SAP;S14;Volumen vacío o en cero;Corregido: Cantidad × Volumen_Caja_m3 del maestro (o mediana de la familia);1048;18563,8218141725;572246196,2
+SAP;S15;"Volumen inconsistente con Cantidad × Volumen_Caja_m3 (fuera de 0.5–2.0×; p. ej. en litros)";Corregido con el volumen teórico del maestro;339;5969,8194669;178247161,0
 SAP;S16;Volumen no recuperable;Excluido;0;0,0;0,0
 SAP;S17;Centro productor distinto a Planta_Produccion_Antes del maestro;Informativo (se usa SAP);0;0,0;0,0
-SAP;S18;IMPORTE SAP en 0, 1 peso o vacío;Excluido del cálculo de tarifa (el volumen sí cuenta para demanda);2744;49113,87688592;1362,5
-SAP;S19;COP/m3 atípico dentro de la ruta (dígito de más, viaje casi vacío);Excluido del cálculo de tarifa;692;9866,940728250001;2293788486,0
-SAP;S20;Registro sin número de viaje;"Se conserva; no puede cruzarse con TMS";1017;18379,225655759998;710029651,7
-SAP;S21;Cliente de distribución (no XI) que no cruza con el maestro de clientes por nombre + ciudad;Informativo: el campo Cliente se separa en nombre y ciudad por « - »;336;0,0;0,0
-TMS;T01;Km del TMS incoherente con la distancia de la ruta;Corregido: se usa km teórico;453;6319,71330579;239437227,1
-TMS;T02;Km del TMS en cero o vacío;Corregido: se usa km teórico;617;10552,909177640002;392836051,6
-TMS;T03;Viaje SAP sin match en TMS;"Se conserva SAP; km teórico, sin dato de vehículo";4991;92160,03293596001;3920488914,5
+SAP;S18;IMPORTE SAP en 0. 1 peso. vacío o simbólico (< 1.000 COP/m³): flota propia o viaje sin liquidar;"Se imputa el flete (ver S22/S23); no entra a la tarifa de terceros";15272;251901,81035599002;8274,5
+SAP;S19;COP/m3 atípico dentro de la ruta (dígito de más, viaje casi vacío);Se re-imputa con viajes similares o costo por km;339;5748,8841;1873862633,9
+SAP;S20;Registro sin número de viaje;"Se conserva; no puede cruzarse con TMS";1031;17289,38123572;589893599,1
+SAP;S21;Cliente de distribución (no XI) que no cruza con el maestro de clientes por nombre + ciudad;Informativo: el campo Cliente se separa en nombre y ciudad por « - »;354;0,0;0,0
+TMS;T01;Km del TMS incoherente con la distancia de la ruta;Corregido: se usa km teórico;270;4876,3313;166047314,0
+TMS;T02;Km del TMS en cero o vacío;Corregido: se usa km teórico;590;10513,410922194998;332076348,1
+TMS;T03;Viaje SAP sin match en TMS;"Se conserva SAP; km teórico, sin dato de vehículo";5073;89826,37636876499;2942174014,7
+SAP;S22;Flete imputado con viajes similares (misma ruta/vehículo, ≥ 3 viajes de terceros);Corregido: mediana COP/m³ de la ruta × volumen;4576;103079,487613195;4308953217,081137
+SAP;S23;Flete imputado por costo por km (6.500 COP/km × km × 1.0);Corregido: costo por km prorrateado por volumen del viaje;11035;154571,20684279499;1001380053,0116334

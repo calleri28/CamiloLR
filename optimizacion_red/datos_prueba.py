@@ -51,6 +51,8 @@ CEDIS = [  # ID_Nodo, código SAP, nombre, ciudad, departamento, zona, lat, lon,
     ("CD11", "CO70", "CEDI Ibagué", "Ibagué", "Tolima", "Centro", 4.438, -75.232, 0.04),
     ("CD12", "CO71", "CEDI Montería", "Montería", "Córdoba", "Caribe", 8.748, -75.881, 0.04),
 ]
+# Lanzaderas cortas que solo hace la flota propia (sin viajes de terceros para comparar)
+RUTAS_SOLO_FLOTA_PROPIA = {("PL01", "CD01"), ("PL03", "CD02"), ("PL04", "CD04")}
 REEXPEDICION = {"CD08": ("CD01", 0.6), "CD09": ("CD03", 0.5), "CD12": ("CD07", 0.4)}
 
 FAMILIAS = {  # nombre: demanda m3/mes, caja (L, A, H cm), peso caja kg, costo var COP/m3, CAPEX traslado
@@ -117,8 +119,13 @@ def generar(carpeta: Path | None = None, rng: np.random.Generator | None = None)
     escribir(_info_cedi(rng), "info_cedi")
     escribir(pd.DataFrame([dict(Codigo_SAP=v["sap"], ID_Nodo=k) for k, v in nodos.items()]), "homologacion")
     escribir(pd.DataFrame([dict(ID_Nodo=i, Familia=f, Capacidad_M3_Mes=c) for (i, f), c in CAPACIDAD.items()]), "capacidad")
-    escribir(pd.DataFrame([dict(ID_Nodo=i, Costo_Fijo_COP_Mes=v[0], Factor_Costo_Variable=_num_co(v[1]), Max_Lineas_Recibir=v[2])
+    escribir(pd.DataFrame([dict(ID_Nodo=i, Costo_Fijo_COP_Mes=v[0], Factor_Costo_Variable=_num_co(v[1]), Max_Lineas_Recibir=v[2],
+                                Costo_Posicion_COP_Mes=30_000, Dias_Inventario_Planta=5)
                            for i, v in PARAM_PLANTAS.items()]), "param_plantas")
+    escribir(pd.DataFrame([dict(ID_Nodo=c[0], Costo_Manejo_COP_Estiba=int(rng.integers(15, 22)) * 1000,
+                                Costo_Posicion_COP_Mes=(62_000 if c[0] in ("CD07", "CD10") else int(rng.integers(40, 50)) * 1000),
+                                Costo_Posicion_Externa_COP_Mes=78_000, Dias_Cobertura_Base=9)
+                           for c in CEDIS]), "param_cedis")
     escribir(pd.DataFrame([dict(Familia=f, Costo_Var_Base_COP_M3=v[3], CAPEX_Traslado_Linea_COP=v[4], Pct_Capacidad_Trasladable="0,9")
                            for f, v in FAMILIAS.items()]), "param_familias")
     return carpeta
@@ -225,9 +232,10 @@ def _info_cedi(rng):
     for c in CEDIS:
         estibas_dia = total * c[8] / 1.7 / P.DIAS_OPERACION_MES
         holgura = 1.05 if c[0] == "CD05" else rng.uniform(1.2, 1.6)
+        pos_factor = 0.8 if c[0] in ("CD05", "CD09") else 1.0
         for zona, frac in (("Almacenamiento general", 0.8), ("Picking", 0.2)):
             filas.append(dict(ID_Nodo=c[0], Zona_Almacenamiento=zona, Tipo_Almacenamiento="Rack selectivo" if zona != "Picking" else "Estantería",
-                              Posiciones_Estiba=int(estibas_dia * 12 * frac), Dias_Operacion_Semana=6, Turnos_Dia=2, Horas_x_Turno=8,
+                              Posiciones_Estiba=int(estibas_dia * 12 * frac * pos_factor), Dias_Operacion_Semana=6, Turnos_Dia=2, Horas_x_Turno=8,
                               Muelles_Recibo=max(2, int(estibas_dia / 40)), Muelles_Despacho=max(2, int(estibas_dia / 30)),
                               Cap_Recibo_Estibas_Dia=int(estibas_dia * holgura), Cap_Despacho_Estibas_Dia=int(estibas_dia * holgura * 1.1),
                               Peso_Max_Posicion_kg=1000, Posiciones_Ampliables=int(estibas_dia * 2), Personal_Operativo_Turno=int(estibas_dia / 6) + 4,
@@ -280,6 +288,10 @@ def _movimientos(rng, nodos, refs, clientes):
             carga = min(cap_m3 * 0.99, vol_m3 / n * rng.uniform(0.95, 1.05))
             km_real = km * rng.uniform(0.97, 1.08)
             costo = (base + por_km * km_real) * rng.lognormal(0, 0.07)
+            # Flota propia: SAP no liquida flete (queda en 0 o 1 peso) y el TMS no trae costo
+            propia = tipo_mov == "XI" and ((origen, destino) in RUTAS_SOLO_FLOTA_PROPIA
+                                           or (km < 600 and tipo != "SENCILLO" and rng.random() < 0.25))
+            importe_propia = int(rng.choice([0, 1]))
             viaje_id += 1
             fecha = mes + pd.Timedelta(days=int(rng.integers(0, 28)))
             partes = rng.dirichlet(np.ones(int(rng.integers(1, 6))))
@@ -295,11 +307,12 @@ def _movimientos(rng, nodos, refs, clientes):
                             "CorredorTransporte": f"{_sin_tilde(o['ciudad']).upper()} - {_sin_tilde(ciudad_dest or d['ciudad']).upper()}",
                             "Poblacion": poblacion(ciudad_dest or d["ciudad"]), "Periodo": fecha.strftime("%Y-%m-%d 00:00:00"),
                             "Mercado": "N", "Tipo": tipo_mov, "Cantidad": cajas,
-                            "IMPORTE SAP": round(costo * frac), "Volumen": round(vol, 3)})
+                            "IMPORTE SAP": importe_propia if propia else round(costo * frac), "Volumen": round(vol, 3)})
             tms.append({"ID_Viaje": str(viaje_id), "Fecha_Despacho": fecha.strftime("%Y-%m-%d"),
                         "Placa": f"{''.join(rng.choice(list('ABCDEFGHJKLMNPRSTUVWXYZ'), 3))}{rng.integers(100, 999)}",
                         "Tipo_Vehiculo": tipo, "Capacidad_M3": cap_m3, "Capacidad_Kg": cap_kg,
-                        "Km_Recorridos": round(km_real, 1), "Costo_Viaje_COP": round(costo * rng.uniform(0.98, 1.03))})
+                        "Km_Recorridos": round(km_real, 1), "Costo_Viaje_COP": "" if propia else round(costo * rng.uniform(0.98, 1.03)),
+                        "Tipo_Flota": "PROPIA" if propia else "TERCERO"})
 
     cl_por_ciudad = {}
     for c in CEDIS:
@@ -339,7 +352,7 @@ def _ensuciar_sap(df, rng):
     def idx(p):
         return rng.choice(n, int(n * p), replace=False)
 
-    df.loc[idx(0.08), "IMPORTE SAP"] = rng.choice([0, 1], int(n * 0.08))                    # 0 o 1 peso
+    df.loc[idx(0.02), "IMPORTE SAP"] = rng.choice([0, 1], int(n * 0.02))                    # 0 o 1 peso sin liquidar
     i = idx(0.01); df.loc[i, "IMPORTE SAP"] = [float(v) * 10 for v in df.loc[i, "IMPORTE SAP"]]   # dígito de más
     i = idx(0.005); df.loc[i, "IMPORTE SAP"] = [float(v) / 10 for v in df.loc[i, "IMPORTE SAP"]]
     i = idx(0.10); df.loc[i, "IMPORTE SAP"] = [_num_co(float(v)) for v in df.loc[i, "IMPORTE SAP"]]   # texto 1.234.567,00
@@ -347,7 +360,8 @@ def _ensuciar_sap(df, rng):
     i = idx(0.02); df.loc[i, "Volumen"] = [f"{float(str(v).replace('.', '').replace(',', '.')):.1E}".replace(".", ",") for v in df.loc[i, "Volumen"]]
     i = idx(0.01); df.loc[i, "Volumen"] = [_num_co(float(str(v).replace(".", "").replace(",", ".")) * 1000, 1) for v in df.loc[i, "Volumen"]]   # en litros
     df.loc[idx(0.03), "Volumen"] = ""
-    i = idx(0.06); df.loc[i, "Tipo"] = rng.choice([" xi", "Xi ", "XI "], len(i))
+    i = rng.choice(df.index[df["Tipo"] == "XI"], int(n * 0.05), replace=False)
+    df.loc[i, "Tipo"] = rng.choice([" xi", "Xi ", "XI "], len(i))
     i = idx(0.05); df.loc[i, "CEDI"] = [f" {str(v).lower()} " for v in df.loc[i, "CEDI"]]
     i = idx(0.003); df.loc[i, "CEDI"] = "CO99"
     xi = df.index[df.Tipo == "XI"]

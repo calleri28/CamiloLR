@@ -54,7 +54,7 @@ nav.tabs button[aria-selected="true"]{color:var(--ink);border-bottom-color:var(-
 .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:16px}
 .kpi{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:12px}
 .kpi .l{font-size:12px;color:var(--ink-2)}
-.kpi .v{font-size:20px;font-weight:600;margin-top:2px}
+.kpi .v{font-size:clamp(16px,1.5vw,20px);font-weight:600;margin-top:2px}
 .kpi .d{font-size:12px;margin-top:2px;color:var(--ink-2)}
 .up{color:var(--bad)}.down{color:var(--good)}
 table{border-collapse:collapse;width:100%;font-size:13px}
@@ -83,6 +83,24 @@ svg text{fill:var(--ink-2);font-size:11px}
 .pill{font-size:11px;padding:1px 6px;border-radius:999px;border:1px solid var(--border)}
 .status{display:inline-flex;align-items:center;gap:4px}
 code{background:var(--surface-2);padding:1px 4px;border-radius:4px}
+.sim{grid-template-columns:340px minmax(0,1fr)}
+@media (max-width:900px){.sim{grid-template-columns:minmax(0,1fr)}}
+.viewbar{position:sticky;top:0;z-index:5;background:var(--page);padding:8px 0;display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center;border-bottom:1px solid var(--grid);margin-bottom:16px}
+.seg{display:inline-flex;border:1px solid var(--border);border-radius:8px;overflow:hidden;background:var(--surface-2)}
+.seg button{font:inherit;font-size:13px;border:0;background:none;color:var(--ink-2);padding:6px 12px;cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink)}
+details.acc{border:1px solid var(--grid);border-radius:8px;margin:10px 0;background:var(--surface)}
+details.acc>summary{cursor:pointer;padding:9px 12px;font-weight:600;font-size:13px;list-style:none;display:flex;justify-content:space-between;gap:8px}
+details.acc>summary::-webkit-details-marker{display:none}
+details.acc>summary::after{content:"＋";color:var(--muted)}
+details.acc[open]>summary::after{content:"－"}
+details.acc>.in{padding:0 12px 10px}
+.mini{font-size:11px;color:var(--muted)}
+.saved{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:4px 0;border-top:1px solid var(--grid);font-size:13px}
+input[type=text]{font:inherit;padding:6px 8px;border-radius:6px;border:1px solid var(--border);background:var(--surface);color:var(--ink);min-width:0;flex:1}
+.changed{box-shadow:inset 3px 0 0 var(--accent)}
+.radio{display:flex;gap:12px;flex-wrap:wrap;font-size:13px;margin:6px 0}
+.pos{color:var(--bad)}.neg{color:var(--good)}
 </style>
 </head>
 <body>
@@ -92,51 +110,92 @@ code{background:var(--surface-2);padding:1px 4px;border-radius:4px}
 </header>
 <main>
 <nav class="tabs" role="tablist">
-  <button role="tab" aria-selected="true" data-t="resumen">Resumen de escenarios</button>
-  <button role="tab" aria-selected="false" data-t="sim">Simulador interactivo</button>
+  <button role="tab" aria-selected="true" data-t="resumen">Resumen</button>
+  <button role="tab" aria-selected="false" data-t="sim">Simulador</button>
+  <button role="tab" aria-selected="false" data-t="comp">Comparar (waterfall)</button>
   <button role="tab" aria-selected="false" data-t="calidad">Calidad de datos</button>
   <button role="tab" aria-selected="false" data-t="tarifas">Tarifas y rutas</button>
   <button role="tab" aria-selected="false" data-t="metodo">Metodología</button>
 </nav>
+<div class="viewbar">
+  <span class="note">Vista de costos</span>
+  <div class="seg" id="segVista" role="group" aria-label="Vista de costos">
+    <button data-v="logistica">Agrupado: producción vs logística</button>
+    <button data-v="grupos">Transporte y almacenamiento</button>
+    <button data-v="detalle">Detallado</button>
+  </div>
+</div>
 
+<!-- ============================ RESUMEN ============================ -->
 <section class="panel active" id="p-resumen">
   <div class="kpis" id="kpisResumen"></div>
-  <div class="card"><h2>Costo total mensual por escenario (MILP resuelto en Python)</h2><div id="chartEsc"></div></div>
+  <div class="card"><h2>Costo mensual por escenario (MILP resuelto en Python)</h2><div id="chartEsc"></div></div>
   <div class="card scroll"><h2>Comparativo de escenarios</h2><table id="tblEsc"></table>
-    <p class="note">Δ contra <b>E0 · Red actual optimizada</b>: compara redes optimizadas con las mismas reglas. El «Flete AS-IS histórico» es el flete real de SAP depurado; su diferencia con el flete de E0 es la ineficiencia de la asignación actual (incluidas las re-expediciones CEDI→CEDI).</p></div>
-  <div class="card scroll"><h2>Plan de traslado según el maestro de referencias</h2><table id="tblPlan"></table>
-    <p class="note">Referencias cuya Planta_Produccion_Antes es la planta que cierra. El volumen histórico pondera el reparto de cada línea en el escenario E3.</p></div>
+    <p class="note">Δ contra <b>E0 · Red actual optimizada</b>. Costos en millones de COP por mes. Cambie la «Vista de costos» arriba para ver transporte y almacenamiento juntos o por separado.</p></div>
+  <div class="grid g2">
+    <div class="card scroll"><h2>Flete histórico (AS-IS)</h2><table id="tblFleteHist"></table><p class="note" id="notaFlete"></p></div>
+    <div class="card scroll"><h2>Plan de traslado según maestro de referencias</h2><table id="tblPlan"></table></div>
+  </div>
 </section>
 
+<!-- ============================ SIMULADOR ============================ -->
 <section class="panel" id="p-sim">
   <div class="grid sim">
     <div>
-      <div class="card">
-        <h2>Variables</h2>
-        <label class="ctl" for="preset">Cargar escenario</label>
-        <div class="ctlrow"><select id="preset" style="flex:1"></select></div>
-        <fieldset><legend>Plantas</legend><div id="ctlPlantas"></div></fieldset>
-        <fieldset><legend>Traslado de líneas de la planta que cierra</legend>
-          <div id="ctlLineas"></div>
-          <div class="ctlrow" style="margin-top:8px"><button class="btn primary" id="btnOpt">Optimizar traslados</button></div>
-          <p class="note" id="optNote"></p>
-        </fieldset>
-        <fieldset><legend>Mercado y costos</legend><div id="ctlGlobal"></div></fieldset>
+      <div class="card" style="padding:12px">
+        <h2 style="margin-bottom:4px">Parámetros</h2>
+        <p class="mini">Cada cambio recalcula la red óptima al instante (flujo de costo mínimo exacto).</p>
+        <label class="ctl" for="preset">Partir de un escenario</label>
+        <div class="ctlrow"><select id="preset" style="flex:1"></select><button class="btn" id="btnReset" title="Volver al escenario elegido">↺</button></div>
+        <details class="acc" open><summary>Guardar y comparar</summary><div class="in">
+          <div class="ctlrow" style="margin-top:6px"><input type="text" id="nomEsc" placeholder="Nombre del escenario" aria-label="Nombre del escenario"><button class="btn primary" id="btnGuardar">Guardar</button></div>
+          <div id="listaGuardados" class="mini" style="margin-top:6px"></div>
+        </div></details>
+        <details class="acc" open><summary>Plantas</summary><div class="in" id="ctlPlantas"></div></details>
+        <details class="acc" open><summary>Traslado de líneas</summary><div class="in" id="ctlLineas"></div></details>
+        <details class="acc"><summary>Demanda</summary><div class="in" id="ctlDemanda"></div></details>
+        <details class="acc"><summary>Transporte y flota propia</summary><div class="in" id="ctlTransporte"></div></details>
+        <details class="acc"><summary>Almacenamiento</summary><div class="in" id="ctlAlm"></div></details>
+        <details class="acc"><summary>Producción, maquila y servicio</summary><div class="in" id="ctlProd"></div></details>
+        <details class="acc"><summary>Inversión y amortización</summary><div class="in" id="ctlFin"></div></details>
       </div>
     </div>
     <div style="min-width:0">
       <div class="kpis" id="kpisSim"></div>
+      <div class="card">
+        <div class="ctlrow" style="justify-content:space-between;flex-wrap:wrap;gap:8px">
+          <h3 style="margin:0">Waterfall: de la base al escenario simulado</h3>
+          <label class="note">Base <select id="baseSim"></select></label>
+        </div>
+        <div id="wfSim"></div>
+      </div>
       <div class="grid g2">
-        <div class="card"><h3>Composición del costo mensual vs E0</h3><div id="chartComp"></div></div>
+        <div class="card"><h3>Composición del costo mensual</h3><div id="chartComp"></div></div>
         <div class="card"><h3>Uso de capacidad por planta</h3><div id="chartUso"></div></div>
       </div>
       <div class="card"><h3>Flujos óptimos planta → CEDI</h3><div id="mapa"></div></div>
-      <div class="card scroll"><h3>Capacidad de recibo de los CEDI (Info_CEDI)</h3><table id="tblRecibo"></table></div>
+      <div class="card scroll"><h3>CEDI: almacenamiento y recibo</h3><table id="tblCedi"></table>
+        <p class="note">Inventario = m³ recibidos × días de cobertura ÷ 30 ÷ m³ por estiba. Los días de cobertura crecen con la distancia a la planta que abastece. Lo que excede las posiciones disponibles (Info_CEDI × ocupación máxima operable) se cobra a tarifa de bodega externa.</p></div>
       <div class="card scroll"><h3>Detalle de asignación (m³/mes)</h3><table id="tblFlujos"></table></div>
     </div>
   </div>
 </section>
 
+<!-- ============================ COMPARAR ============================ -->
+<section class="panel" id="p-comp">
+  <div class="card">
+    <div class="ctlrow" style="flex-wrap:wrap;gap:12px">
+      <label class="note">Desde <select id="cmpA"></select></label>
+      <label class="note">Hasta <select id="cmpB"></select></label>
+    </div>
+    <div id="wfComp" style="margin-top:8px"></div>
+  </div>
+  <div class="card scroll"><div class="ctlrow" style="justify-content:space-between"><h2 style="margin:0">Todos los escenarios</h2><button class="btn" id="btnCsv">Descargar CSV</button></div>
+    <table id="tblComp" style="margin-top:8px"></table>
+    <p class="note">Incluye los escenarios de Python, los que guarde en el simulador y la simulación actual. Millones de COP por mes.</p></div>
+</section>
+
+<!-- ============================ CALIDAD ============================ -->
 <section class="panel" id="p-calidad">
   <div class="kpis" id="kpisCal"></div>
   <div class="card"><h2>Lectura de los hallazgos</h2><ul id="hallazgos"></ul></div>
@@ -146,11 +205,12 @@ code{background:var(--surface-2);padding:1px 4px;border-radius:4px}
     <p class="note">Volumen e importe corresponden a los registros afectados por cada regla al momento de aplicarla.</p></div>
 </section>
 
+<!-- ============================ TARIFAS ============================ -->
 <section class="panel" id="p-tarifas">
   <div class="grid g2">
-    <div class="card"><h2>Costo por m³ vs distancia</h2><div id="chartReg"></div><p class="note" id="regNote"></p></div>
-    <div class="card scroll"><h2>Tarifa planta → CEDI (COP/m³)</h2><table id="tblTar"></table>
-      <p class="note">* Ruta sin historia suficiente: tarifa estimada con la regresión por km.</p></div>
+    <div class="card"><h2>Costo por m³ vs distancia (terceros)</h2><div id="chartReg"></div><p class="note" id="regNote"></p></div>
+    <div class="card scroll"><h2>Tarifa efectiva planta → CEDI (COP/m³)</h2><table id="tblTar"></table>
+      <p class="note">Mezcla de tercero y flota propia con los supuestos actuales del simulador. * Ruta sin historia de terceros.</p></div>
   </div>
 </section>
 
@@ -160,7 +220,7 @@ code{background:var(--surface-2);padding:1px 4px;border-radius:4px}
 
 <script>
 const DATA = /*__DATA__*/null;
-const INS = DATA.insumos;
+const INS = DATA.insumos, BASECFG = DATA.cfg_base;
 const PL = Object.keys(INS.plantas), CE = Object.keys(INS.cedis), FA = INS.familias, CIERRE = INS.planta_cierre;
 const SER = ["var(--s1)","var(--s2)","var(--s3)","var(--s4)","var(--s5)"];
 const plantColor = Object.fromEntries(PL.map((p,i)=>[p,SER[i%SER.length]]));
@@ -169,8 +229,9 @@ const nf1 = new Intl.NumberFormat("es-CO",{maximumFractionDigits:1,minimumFracti
 const nf2 = new Intl.NumberFormat("es-CO",{maximumFractionDigits:2});
 const MM = v => (v<-0.5e6?"−":"") + "$" + nf0.format(Math.abs(v)/1e6) + " M";
 const pct = v => nf1.format(v*100) + " %";
-const tit = s => s.toLowerCase().replace(/\b\w/g,c=>c.toUpperCase());
+const tit = s => s.toLowerCase().replace(/(^|\s)\S/g,c=>c.toUpperCase());
 const $ = s => document.querySelector(s);
+const clone = o => JSON.parse(JSON.stringify(o));
 const el = (tag, attrs={}, html="") => { const e=document.createElement(tag); for(const k in attrs) e.setAttribute(k,attrs[k]); e.innerHTML=html; return e; };
 const svgNS="http://www.w3.org/2000/svg";
 const sv = (tag, attrs={}) => { const e=document.createElementNS(svgNS,tag); for(const k in attrs) e.setAttribute(k,attrs[k]); return e; };
@@ -181,25 +242,59 @@ function bindTip(node, html){ node.addEventListener("mousemove",e=>{tip.innerHTM
 const kpi = (box,l,v,d="") => box.append(el("div",{class:"kpi"},`<div class="l">${l}</div><div class="v">${v}</div><div class="d">${d}</div>`));
 const nomP = i => INS.plantas[i].ciudad;
 const fmtTr = tr => Object.entries(tr||{}).map(([f,d])=>tit(f)+" → "+Object.entries(d).map(([p,s])=>nomP(p)+(s<0.999?" "+Math.round(s*100)+" %":"")).join(", ")).join("<br>") || "—";
+const store = { get(k){ try{ return JSON.parse(localStorage.getItem(k)||"null"); }catch(e){ return null; } }, set(k,v){ try{ localStorage.setItem(k,JSON.stringify(v)); }catch(e){} } };
+
+/* ======================= Categorías de costo y vistas ======================= */
+const tint = (c,p) => p>=100?c:`color-mix(in srgb, ${c} ${p}%, var(--surface))`;
+const DET = [
+  ["produccion","Producción variable","prod",tint("var(--s1)",100)],
+  ["horas_extra","Horas extra","prod",tint("var(--s1)",75)],
+  ["fijo","Costo fijo de plantas","prod",tint("var(--s1)",55)],
+  ["capex","Traslado de líneas (CAPEX amort.)","prod",tint("var(--s1)",38)],
+  ["flete","Flete primario","trans",tint("var(--s2)",100)],
+  ["manejo","Manejo en CEDI","alm",tint("var(--s3)",100)],
+  ["inventario_cedi","Inventario en CEDI","alm",tint("var(--s3)",75)],
+  ["desborde","Desborde a bodega externa","alm",tint("var(--s3)",55)],
+  ["inventario_planta","Inventario en planta","alm",tint("var(--s3)",38)],
+  ["maquila","Maquila","otros",tint("var(--s5)",100)],
+  ["penalidad","Demanda no atendida","otros",tint("var(--s5)",60)],
+];
+const GRP = {prod:["Producción","var(--s1)"], trans:["Transporte","var(--s2)"], alm:["Almacenamiento","var(--s3)"], otros:["Maquila y no atendida","var(--s5)"]};
+let VISTA = store.get("red_vista") || "grupos";
+function categorias(c){  // -> [{k,label,value,color}]
+  if(VISTA==="detalle") return DET.map(([k,l,g,col])=>({k,label:l,value:c[k]||0,color:col}));
+  const sum = gs => DET.filter(d=>gs.includes(d[2])).reduce((a,d)=>a+(c[d[0]]||0),0);
+  if(VISTA==="grupos") return Object.entries(GRP).map(([g,[l,col]])=>({k:g,label:l,value:sum([g]),color:col}));
+  return [{k:"prod",label:"Producción",value:sum(["prod"]),color:"var(--s1)"},
+          {k:"log",label:"Logística (transporte + almacenamiento)",value:sum(["trans","alm"]),color:"var(--s2)"},
+          {k:"otros",label:"Maquila y no atendida",value:sum(["otros"]),color:"var(--s5)"}];
+}
+const logistica = c => c.flete+c.manejo+c.inventario_cedi+c.desborde+c.inventario_planta;
+function setVista(v){ VISTA=v; store.set("red_vista",v);
+  document.querySelectorAll("#segVista button").forEach(b=>b.setAttribute("aria-pressed",b.dataset.v===v));
+  renderTodo(); }
+document.querySelectorAll("#segVista button").forEach(b=>b.onclick=()=>setVista(b.dataset.v));
 
 $("#fecha").textContent = DATA.generado;
+let TAB="resumen";
 document.querySelectorAll("nav.tabs button").forEach(b=>b.onclick=()=>{
+  TAB=b.dataset.t;
   document.querySelectorAll("nav.tabs button").forEach(x=>x.setAttribute("aria-selected",x===b));
-  document.querySelectorAll(".panel").forEach(p=>p.classList.toggle("active",p.id==="p-"+b.dataset.t));
-  if(b.dataset.t==="sim") renderSim();
-  if(b.dataset.t==="tarifas") renderTarifas();
+  document.querySelectorAll(".panel").forEach(p=>p.classList.toggle("active",p.id==="p-"+TAB));
+  renderTodo();
 });
 
 /* ======================= Solver: flujo de costo mínimo ======================= */
-function MCF(n){ this.n=n; this.g=Array.from({length:n},()=>[]); }
+function MCF(){ this.g=[]; }
+MCF.prototype.node=function(){ this.g.push([]); return this.g.length-1; };
 MCF.prototype.add=function(u,v,cap,cost){ const a={to:v,cap,cost,flow:0}, b={to:u,cap:0,cost:-cost,flow:0};
   a.rev=b; b.rev=a; this.g[u].push(a); this.g[v].push(b); return a; };
 MCF.prototype.run=function(s,t){
-  const n=this.n, EPS=1e-9;
+  const n=this.g.length, EPS=1e-9;
   while(true){
     const dist=new Float64Array(n).fill(Infinity), inq=new Uint8Array(n), prev=new Array(n);
-    dist[s]=0; const q=[s]; inq[s]=1;
-    while(q.length){ const u=q.shift(); inq[u]=0;
+    dist[s]=0; const q=[s]; inq[s]=1; let h=0;
+    while(h<q.length){ const u=q[h++]; inq[u]=0;
       for(const e of this.g[u]) if(e.cap-e.flow>EPS && dist[u]+e.cost<dist[e.to]-1e-7){
         dist[e.to]=dist[u]+e.cost; prev[e.to]=e; if(!inq[e.to]){inq[e.to]=1;q.push(e.to);} } }
     if(dist[t]===Infinity) break;
@@ -209,59 +304,82 @@ MCF.prototype.run=function(s,t){
   }
 };
 
-/* cfg: {abiertas, cap_pct, traslados{fam:{planta:fracción}}, aplicar_desc, g, ff, fp, he_pct, maq_cap, meses} */
+/* Costos unitarios: idénticos a optimizador.py */
+function tarifaEf(cfg,i,j){ const k=i+"|"+j, hist=INS.historia[k];
+  const terc=INS.tarifa[k]*(1+(hist?0:cfg.prima_nuevas));
+  const ownKm=cfg.cop_km*INS.km[k]*cfg.fr/INS.vol_viaje_propio;
+  const own=(cfg.metodo==="km"||!hist)?ownKm:terc;
+  const s=cfg.share_mode==="hist"?INS.share_propia[k]:cfg.share;
+  return ((1-s)*terc+s*own)*cfg.ff; }
+const diasCob = (cfg,j,km) => Math.max(0, INS.cedis[j].dias_base+cfg.dias_delta+cfg.dias_1000*km/1000);
 function demandaCfg(cfg){ const D={}; let tot=0;
-  CE.forEach(j=>FA.forEach(f=>{ const k=j+"|"+f; const d=Math.max(0,(INS.demanda[k]||0)-(cfg.aplicar_desc?(INS.descontinuada[k]||0):0))*(1+cfg.g); D[k]=d; tot+=d; }));
+  CE.forEach(j=>FA.forEach(f=>{ const k=j+"|"+f; const d=Math.max(0,(INS.demanda[k]||0)-(cfg.aplicar_desc?(INS.descontinuada[k]||0):0))*(1+cfg.g)*(1+cfg.g_fam[f])*(1+cfg.g_cedi[j]); D[k]=d; tot+=d; }));
   return {D,tot}; }
+function trasladosEfectivos(cfg){ const t={};
+  if(CIERRE && !cfg.abiertas[CIERRE]) Object.entries(cfg.traslados||{}).forEach(([f,d])=>Object.entries(d).forEach(([p,w])=>{
+    if(cfg.abiertas[p] && p!==CIERRE && w>0 && (INS.cap_traslado[f]||0)>0) (t[f]??={})[p]=w; }));
+  return t; }
+
 function resolverRed(cfg){
-  const id={}; let n=0; const node=k=>(id[k]??=(n++));
-  const S=node("S"), T=node("T"), MQ=node("MQ");
-  const trasl={};   // solo cuenta lo que llega a plantas abiertas, con la planta en cierre cerrada
-  if(CIERRE && !cfg.abiertas[CIERRE]) Object.entries(cfg.traslados).forEach(([f,d])=>Object.entries(d).forEach(([p,w])=>{
-    if(cfg.abiertas[p] && p!==CIERRE && w>0) (trasl[f]??={})[p]=w; }));
-  const {D,tot:Dtot}=demandaCfg(cfg);
-  const net=new MCF(2+1+PL.length*FA.length+CE.length*FA.length+4);
+  const net=new MCF(), S=net.node(), T=net.node(), MQ=net.node();
+  const trasl=trasladosEfectivos(cfg), {D,tot:Dtot}=demandaCfg(cfg), m3e=INS.m3_estiba;
+  const Dn={}; CE.forEach(j=>FA.forEach(f=>Dn[j+"|"+f]=net.node()));
   const lin={}, arcs=[];
-  PL.forEach(i=>FA.forEach(f=>{
-    const w=(trasl[f]&&trasl[f][i])||0;
-    const cap=(INS.cap[i+"|"+f]||0)*cfg.cap_pct[i]*(cfg.abiertas[i]?1:0) + (INS.cap_traslado[f]||0)*w;
-    if(cap<=0) return;
-    const P=node("P"+i+"|"+f), cvv=INS.cv[i+"|"+f]*cfg.fp;
-    const reg=net.add(S,P,cap,cvv), he=net.add(S,P,cfg.he_pct*cap,cvv*(1+INS.he_sobrecosto));
-    lin[i+"|"+f]={cap,reg,he,cvv};
-    CE.forEach(j=>{ const a=net.add(P,node("D"+j+"|"+f),1e12,INS.tarifa[i+"|"+j]*cfg.ff); arcs.push({i,j,f,a}); });
-  }));
+  PL.forEach(i=>{ const p=INS.plantas[i];
+    const almP=Math.max(0,p.dias_inv+cfg.dias_planta_delta)/30*p.cpos*cfg.pos_idx;
+    FA.forEach(f=>{
+      const w=(trasl[f]&&trasl[f][i])||0;
+      const cap=(INS.cap[i+"|"+f]||0)*cfg.cap_pct[i]*(cfg.abiertas[i]?1:0)+(INS.cap_traslado[f]||0)*w;
+      if(cap<=0) return;
+      const P=net.node(), cvv=INS.cv[i+"|"+f]*cfg.fp*cfg.cv_pct[i], ap=almP/m3e[f];
+      const reg=net.add(S,P,cap,cvv+ap), he=net.add(S,P,cfg.he_pct*cap,cvv*(1+cfg.he_sobre)+ap);
+      lin[i+"|"+f]={i,f,cap,reg,he,cvv,ap};
+      CE.forEach(j=>{ const c=INS.cedis[j], fl=tarifaEf(cfg,i,j), mj=c.manejo*cfg.manejo_idx/m3e[f], dias=diasCob(cfg,j,INS.km[i+"|"+j]);
+        const inv=dias/30*c.cpos*cfg.pos_idx/m3e[f];
+        arcs.push({i,j,f,fl,mj,inv,dias,a:net.add(P,Dn[j+"|"+f],1e12,fl+mj+inv)}); });
+    }); });
   net.add(S,MQ,cfg.maq_cap,0);
-  const maqArcs=[], penArcs=[];
-  CE.forEach(j=>FA.forEach(f=>{
-    const Dn=node("D"+j+"|"+f);
-    const cm=INS.cv_base[f]*(1+INS.maquila_pct)*cfg.fp+INS.flete_medio_cedi[j]*cfg.ff;
-    maqArcs.push({cm,a:net.add(MQ,Dn,1e12,cm)});
-    penArcs.push({a:net.add(S,Dn,1e12,INS.penalidad)});
-    net.add(Dn,T,D[j+"|"+f],0);
-  }));
+  const maq=[], pen=[];
+  CE.forEach(j=>FA.forEach(f=>{ const c=INS.cedis[j], k=j+"|"+f;
+    const mp=INS.cv_base[f]*(1+cfg.maq_pct)*cfg.fp, mf=INS.flete_medio_cedi[j]*cfg.ff, mj=c.manejo*cfg.manejo_idx/m3e[f];
+    const dias=diasCob(cfg,j,0), inv=dias/30*c.cpos*cfg.pos_idx/m3e[f];
+    maq.push({j,f,mp,mf,mj,inv,dias,a:net.add(MQ,Dn[k],1e12,mp+mf+mj+inv)});
+    pen.push({j,f,a:net.add(S,Dn[k],1e12,cfg.penalidad)});
+    net.add(Dn[k],T,D[k],0); }));
   net.run(S,T);
-  const flujos=arcs.filter(x=>x.a.flow>1e-6).map(x=>({origen:x.i,destino:x.j,familia:x.f,m3:x.a.flow,tarifa:INS.tarifa[x.i+"|"+x.j]*cfg.ff,km:INS.km[x.i+"|"+x.j]}));
-  const c={produccion:0,flete:0,horas_extra:0,maquila:0,penalidad:0,fijo:0,capex:0};
-  flujos.forEach(x=>{ c.flete+=x.m3*x.tarifa; });
-  const uso={};
-  PL.forEach(i=>{ uso[i]={capacidad:0,produccion:0,horas_extra:0,por_familia:{}};
-    if(cfg.abiertas[i]) c.fijo+=INS.plantas[i].costo_fijo; });
-  Object.entries(lin).forEach(([k,L])=>{ const [i,f]=k.split("|");
-    c.produccion+=(L.reg.flow+L.he.flow)*L.cvv; c.horas_extra+=L.he.flow*L.cvv*INS.he_sobrecosto;
-    const u=uso[i]; u.capacidad+=L.cap; u.produccion+=L.reg.flow+L.he.flow; u.horas_extra+=L.he.flow;
-    u.por_familia[f]={capacidad:L.cap,produccion:L.reg.flow+L.he.flow}; });
+
+  const c={produccion:0,horas_extra:0,fijo:0,capex:0,flete:0,manejo:0,inventario_cedi:0,desborde:0,inventario_planta:0,maquila:0,penalidad:0};
+  const uso={}; PL.forEach(i=>uso[i]={capacidad:0,produccion:0,horas_extra:0,por_familia:{}});
+  Object.values(lin).forEach(L=>{ const q=L.reg.flow+L.he.flow;
+    c.produccion+=q*L.cvv; c.horas_extra+=L.he.flow*L.cvv*cfg.he_sobre; c.inventario_planta+=q*L.ap;
+    const u=uso[L.i]; u.capacidad+=L.cap; u.produccion+=q; u.horas_extra+=L.he.flow; u.por_familia[L.f]={capacidad:L.cap,produccion:q}; });
   PL.forEach(i=>uso[i].utilizacion=uso[i].capacidad?uso[i].produccion/uso[i].capacidad:0);
-  let maq=0, un=0;
-  maqArcs.forEach(x=>{maq+=x.a.flow; c.maquila+=x.a.flow*x.cm;});
-  penArcs.forEach(x=>{un+=x.a.flow; c.penalidad+=x.a.flow*INS.penalidad;});
-  Object.entries(trasl).forEach(([f,d])=>Object.values(d).forEach(w=>c.capex+=INS.capex[f]*w/cfg.meses));
+  const invJ={}; CE.forEach(j=>invJ[j]={inv:0,m3:0,diasPond:0,maq:0});
+  const flujos=[];
+  arcs.forEach(x=>{ const q=x.a.flow; if(q<=1e-6) return;
+    c.flete+=q*x.fl; c.manejo+=q*x.mj; c.inventario_cedi+=q*x.inv;
+    invJ[x.j].inv+=q*x.dias/30/m3e[x.f]; invJ[x.j].m3+=q; invJ[x.j].diasPond+=q*x.dias;
+    flujos.push({origen:x.i,destino:x.j,familia:x.f,m3:q,flete:x.fl,km:INS.km[x.i+"|"+x.j]}); });
+  let maqT=0, unT=0;
+  maq.forEach(x=>{ const q=x.a.flow; if(q<=1e-9) return; maqT+=q;
+    c.maquila+=q*x.mp; c.flete+=q*x.mf; c.manejo+=q*x.mj; c.inventario_cedi+=q*x.inv;
+    invJ[x.j].inv+=q*x.dias/30/m3e[x.f]; invJ[x.j].m3+=q; invJ[x.j].diasPond+=q*x.dias; invJ[x.j].maq+=q; });
+  pen.forEach(x=>{ unT+=x.a.flow; c.penalidad+=x.a.flow*cfg.penalidad; });
+  PL.forEach(i=>{ if(cfg.abiertas[i]) c.fijo+=INS.plantas[i].costo_fijo*cfg.fijo_pct[i]; });
+  if(CIERRE && !cfg.abiertas[CIERRE]) c.fijo+=INS.plantas[CIERRE].costo_fijo*cfg.residual_cierre;
+  Object.entries(trasl).forEach(([f,d])=>Object.values(d).forEach(w=>c.capex+=INS.capex[f]*cfg.capex_idx/cfg.meses*w));
+  const cedis={};
+  CE.forEach(j=>{ const C=INS.cedis[j], v=invJ[j];
+    const capj=C.posiciones?C.posiciones*C.util_max*cfg.pos_cap_pct:null;
+    const exc=capj!==null?Math.max(0,v.inv-capj):0, costo=exc*Math.max(0,C.cext*cfg.ext_idx-C.cpos*cfg.pos_idx);
+    c.desborde+=costo;
+    const est=FA.reduce((a,f)=>a+(D[j+"|"+f]||0)/(m3e[f]||1.7),0)/INS.dias_mes;
+    cedis[j]={inventario_estibas:v.inv,capacidad_estibas:capj,exceso_estibas:exc,costo_desborde:costo,dias:v.m3?v.diasPond/v.m3:0,recibo_estibas_dia:est}; });
   c.total=Object.values(c).reduce((a,b)=>a+b,0);
   const vol=flujos.reduce((a,x)=>a+x.m3,0), vk=flujos.reduce((a,x)=>a+x.m3*x.km,0);
-  return {costos:c,flujos,uso,traslados:trasl,maquila_m3:maq,no_atendida_m3:un,demanda_m3:Dtot,km_promedio:vol?vk/vol:0,costo_por_m3:Dtot?c.total/Dtot:0,D};
+  return {costos:c,flujos,uso,cedis,traslados:trasl,maquila_m3:maqT,no_atendida_m3:unT,demanda_m3:Dtot,km_promedio:vol?vk/vol:0,costo_por_m3:Dtot?c.total/Dtot:0};
 }
 
-/* Enumeración exacta de traslados (equivale a las binarias del MILP) */
 function optimizarTraslados(cfg){
   if(!CIERRE || cfg.abiertas[CIERRE]) return {traslados:{},evaluadas:0};
   const fams=FA.filter(f=>(INS.cap_traslado[f]||0)>0), dest=[null,...PL.filter(p=>p!==CIERRE && cfg.abiertas[p])];
@@ -274,42 +392,56 @@ function optimizarTraslados(cfg){
       const r=resolverRed({...cfg,traslados:t}); n++;
       if(!best || r.costos.total<best.r.costos.total-1) best={t,r};
       return; }
-    for(const d of dest){ cur[fams[k]]=d; rec(k+1,cur); }
-  };
+    for(const d of dest){ cur[fams[k]]=d; rec(k+1,cur); } };
   rec(0,{});
   return {traslados:best.t,evaluadas:n};
 }
 
 /* ======================= Gráficos ======================= */
-function ejes(s,W,H,padL,padR,max,fmt){ [0,.25,.5,.75,1].forEach(k=>{ const x=padL+(W-padL-padR)*k;
-  s.append(sv("line",{x1:x,x2:x,y1:0,y2:H-20,stroke:"var(--grid)"})); const t=sv("text",{x,y:H-6,"text-anchor":"middle"}); t.textContent=fmt(max*k); s.append(t); }); }
-function hbar(container, rows, padL=250){
-  const W=Math.max(320, container.clientWidth||640), rowH=30, padR=90, H=rows.length*rowH+24;
-  const max=Math.max(...rows.map(r=>r.value))*1.05||1;
-  const s=sv("svg",{width:"100%",viewBox:`0 0 ${W} ${H}`,role:"img"}); ejes(s,W,H,padL,padR,max,v=>nf0.format(v/1e6));
-  rows.forEach((r,k)=>{ const y=k*rowH+4, w=(W-padL-padR)*r.value/max;
-    const lb=sv("text",{x:padL-8,y:y+15,"text-anchor":"end"}); lb.textContent=r.label; s.append(lb);
-    s.append(sv("rect",{x:padL,y,width:Math.max(1,w),height:20,rx:4,fill:r.color}));
-    const vt=sv("text",{x:padL+w+6,y:y+15}); vt.textContent=MM(r.value); s.append(vt);
-    const hit=sv("rect",{x:0,y,width:W,height:rowH-4,fill:"transparent"}); s.append(hit); bindTip(hit,()=>r.tip); });
-  container.innerHTML=""; container.append(s, el("p",{class:"note"},"Millones de COP por mes"));
-}
-const COMP=[["produccion","Producción (incl. horas extra)"],["flete","Flete primario"],["fijo","Costo fijo de plantas"],["capex","Traslado de líneas (amortizado)"],["contingencia","Maquila + no atendida"]];
-const comps = c => ({produccion:c.produccion,flete:c.flete,fijo:c.fijo,capex:c.capex,contingencia:c.maquila+c.penalidad});
-function stacked(container, bars){
-  const W=Math.max(320, container.clientWidth||600), padL=90, padR=16, rowH=44, H=bars.length*rowH+28;
-  const max=Math.max(...bars.map(b=>Object.values(b.c).reduce((a,v)=>a+v,0)))*1.02;
-  const s=sv("svg",{width:"100%",viewBox:`0 0 ${W} ${H}`,role:"img"}); ejes(s,W,H,padL,padR,max,v=>nf0.format(v/1e6));
-  bars.forEach((b,k)=>{ const y=k*rowH+6; let x=padL;
-    const lb=sv("text",{x:padL-8,y:y+19,"text-anchor":"end"}); lb.textContent=b.label; s.append(lb);
-    COMP.forEach(([key,name],ci)=>{ const v=b.c[key]; if(v<=0) return; const w=(W-padL-padR)*v/max;
-      const r=sv("rect",{x,y,width:Math.max(0,w-2),height:28,rx:2,fill:SER[ci]}); s.append(r);
-      bindTip(r,()=>`<b>${b.label}</b><br>${name}: ${MM(v)}`); x+=w; }); });
-  const lg=el("div",{class:"legend"}); COMP.forEach(([k,n],i)=>lg.append(el("span",{},`<span class="sw" style="background:${SER[i]}"></span>${n}`)));
+function ejeX(s,W,H,padL,padR,min,max,fmt,ticks=4){ for(let k=0;k<=ticks;k++){ const v=min+(max-min)*k/ticks, x=padL+(W-padL-padR)*k/ticks;
+  s.append(sv("line",{x1:x,x2:x,y1:0,y2:H-20,stroke:"var(--grid)"})); const t=sv("text",{x,y:H-6,"text-anchor":"middle"}); t.textContent=fmt(v); s.append(t); } }
+function stackedBars(container, bars, padL=200){
+  const W=Math.max(320, container.clientWidth||640), padR=70, rowH=36, H=bars.length*rowH+26;
+  padL=Math.min(padL, W*0.38);
+  const max=Math.max(...bars.map(b=>b.cats.reduce((a,c)=>a+Math.max(0,c.value),0)))*1.02||1;
+  const s=sv("svg",{width:"100%",viewBox:`0 0 ${W} ${H}`,role:"img"}); ejeX(s,W,H,padL,padR,0,max,v=>nf0.format(v/1e6));
+  const X=v=>(W-padL-padR)*v/max;
+  bars.forEach((b,k)=>{ const y=k*rowH+5; let x=padL;
+    const lb=sv("text",{x:padL-8,y:y+16,"text-anchor":"end"}); lb.textContent=b.label; s.append(lb);
+    b.cats.forEach(c=>{ if(c.value<=0) return; const w=X(c.value);
+      const r=sv("rect",{x,y,width:Math.max(0.5,w-2),height:22,rx:2,fill:c.color}); s.append(r);
+      bindTip(r,()=>`<b>${b.label}</b><br>${c.label}: ${MM(c.value)}<br>${pct(c.value/b.total)} del total`); x+=w; });
+    const t=sv("text",{x:x+6,y:y+16}); t.textContent=MM(b.total); s.append(t); });
+  const lg=el("div",{class:"legend"}); bars[0].cats.forEach(c=>lg.append(el("span",{},`<span class="sw" style="background:${c.color}"></span>${c.label}`)));
   container.innerHTML=""; container.append(s, lg, el("p",{class:"note"},"Millones de COP por mes"));
 }
+function waterfall(container, A, B, nomA, nomB){
+  const ca=categorias(A), cb=categorias(B);
+  const pasos=ca.map((c,k)=>({label:c.label, d:cb[k].value-c.value})).filter(p=>Math.abs(p.d)>=0.5e6);
+  const rows=[{label:nomA,tipo:"tot",v0:0,v1:A.total}]; let acc=A.total;
+  pasos.forEach(p=>{ rows.push({label:p.label,tipo:p.d>0?"sube":"baja",v0:acc,v1:acc+p.d,d:p.d}); acc+=p.d; });
+  rows.push({label:nomB,tipo:"tot",v0:0,v1:B.total});
+  const vals=rows.flatMap(r=>r.tipo==="tot"?[r.v1]:[r.v0,r.v1]);
+  let lo=Math.min(...vals), hi=Math.max(...vals); const span=(hi-lo)||Math.abs(hi)*0.1||1;
+  lo=Math.max(0, lo-span*0.6); hi=hi+span*0.15;
+  const W=Math.max(320, container.clientWidth||640), padL=Math.min(230, W*0.4), padR=90, rowH=30, H=rows.length*rowH+26;
+  const X=v=>padL+(W-padL-padR)*(Math.max(lo,Math.min(hi,v))-lo)/(hi-lo);
+  const s=sv("svg",{width:"100%",viewBox:`0 0 ${W} ${H}`,role:"img"}); ejeX(s,W,H,padL,padR,lo,hi,v=>nf0.format(v/1e6));
+  rows.forEach((r,k)=>{ const y=k*rowH+5;
+    const lb=sv("text",{x:padL-8,y:y+15,"text-anchor":"end"}); lb.textContent=r.label; if(r.tipo==="tot") lb.setAttribute("font-weight","600"); s.append(lb);
+    const a=r.tipo==="tot"?X(lo):X(Math.min(r.v0,r.v1)), b=r.tipo==="tot"?X(r.v1):X(Math.max(r.v0,r.v1));
+    const col=r.tipo==="tot"?"var(--ink-2)":(r.tipo==="sube"?"var(--bad)":"var(--good)");
+    const rect=sv("rect",{x:a,y,width:Math.max(1.5,b-a),height:20,rx:3,fill:col}); s.append(rect);
+    if(k<rows.length-1){ const nx=r.tipo==="tot"?r.v1:r.v1; s.append(sv("line",{x1:X(nx),x2:X(nx),y1:y+20,y2:y+rowH+5,stroke:"var(--axis)","stroke-dasharray":"2 2"})); }
+    const t=sv("text",{x:b+6,y:y+15}); t.textContent=r.tipo==="tot"?MM(r.v1):(r.d>0?"+":"−")+MM(Math.abs(r.d)).replace("−",""); s.append(t);
+    bindTip(rect,()=>r.tipo==="tot"?`<b>${r.label}</b><br>${MM(r.v1)}`:`<b>${r.label}</b><br>${r.d>0?"Aumenta":"Disminuye"} ${MM(Math.abs(r.d))}`); });
+  const dT=B.total-A.total;
+  container.innerHTML=""; container.append(s,
+    el("div",{class:"legend"},`<span><span class="sw" style="background:var(--bad)"></span>▲ aumenta el costo</span><span><span class="sw" style="background:var(--good)"></span>▼ reduce el costo</span><span><span class="sw" style="background:var(--ink-2)"></span>Total</span>`),
+    el("p",{class:"note"},`Millones de COP por mes. El eje no inicia en cero para que las variaciones se vean. `+(Math.abs(dT)<0.5e6?"Sin diferencia neta.":`Diferencia neta: <b class="${dT>0?"pos":"neg"}">${dT>0?"▲ +":"▼ −"}${MM(Math.abs(dT)).replace("−","")}/mes</b> · ${dT>0?"▲ +":"▼ −"}${MM(Math.abs(12*dT)).replace("−","")}/año.`)));
+}
 function usoChart(container, r){
-  const W=Math.max(320, container.clientWidth||600), padL=150, padR=60, rowH=34;
+  const W=Math.max(320, container.clientWidth||600), padL=Math.min(150,W*0.35), padR=60, rowH=34;
   const rows=PL.filter(i=>r.uso[i].capacidad>0||r.uso[i].produccion>0);
   const H=rows.length*rowH+28, max=Math.max(1.2,...rows.map(i=>r.uso[i].utilizacion));
   const s=sv("svg",{width:"100%",viewBox:`0 0 ${W} ${H}`,role:"img"}); const X=v=>padL+(W-padL-padR)*v/max;
@@ -321,154 +453,231 @@ function usoChart(container, r){
     const t=sv("text",{x:X(u.utilizacion)+6,y:y+15}); t.textContent=pct(u.utilizacion); s.append(t);
     const hit=sv("rect",{x:0,y,width:W,height:rowH-4,fill:"transparent"}); s.append(hit);
     bindTip(hit,()=>`<b>${INS.plantas[i].nombre}</b><br>${nf0.format(u.produccion)} de ${nf0.format(u.capacidad)} m³/mes<br>Horas extra: ${nf0.format(u.horas_extra)} m³<br>`+
-      Object.entries(u.por_familia).map(([f,v])=>`${tit(f)}: ${nf0.format(v.produccion)} / ${nf0.format(v.capacidad)}`).join("<br>")); });
+      Object.entries(u.por_familia||{}).map(([f,v])=>`${tit(f)}: ${nf0.format(v.produccion)} / ${nf0.format(v.capacidad)}`).join("<br>")); });
   container.innerHTML=""; container.append(s, el("p",{class:"note"},"Producción / capacidad de líneas (incluye líneas trasladadas). Más de 100 % = horas extra."));
 }
 function mapa(container, r){
   const W=Math.max(320, Math.min(container.clientWidth||700, 760)), H=W*1.05;
-  const nodosAll=[...PL.map(i=>INS.plantas[i]),...CE.map(j=>INS.cedis[j])];
-  const la=nodosAll.map(n=>n.lat), lo=nodosAll.map(n=>n.lon);
+  const all=[...PL.map(i=>INS.plantas[i]),...CE.map(j=>INS.cedis[j])];
+  const la=all.map(n=>n.lat), lo=all.map(n=>n.lon);
   const lat0=Math.min(...la)-0.5, lat1=Math.max(...la)+0.5, lon0=Math.min(...lo)-0.6, lon1=Math.max(...lo)+0.9;
   const P=(lat,lon)=>[20+(lon-lon0)/(lon1-lon0)*(W-40), 20+(lat1-lat)/(lat1-lat0)*(H-40)];
   const s=sv("svg",{width:"100%",viewBox:`0 0 ${W} ${H}`,role:"img"});
   s.append(sv("rect",{x:0,y:0,width:W,height:H,fill:"var(--surface-2)",rx:8}));
-  const agg={}; r.flujos.forEach(f=>{ const k=f.origen+"|"+f.destino; (agg[k]??={o:f.origen,d:f.destino,v:0,c:0,fam:{}}); agg[k].v+=f.m3; agg[k].c+=f.m3*f.tarifa; agg[k].fam[f.familia]=(agg[k].fam[f.familia]||0)+f.m3; });
+  const agg={}; r.flujos.forEach(f=>{ const k=f.origen+"|"+f.destino; (agg[k]??={o:f.origen,d:f.destino,v:0,c:0,fam:{}}); agg[k].v+=f.m3; agg[k].c+=f.m3*f.flete; agg[k].fam[f.familia]=(agg[k].fam[f.familia]||0)+f.m3; });
   const maxV=Math.max(...Object.values(agg).map(a=>a.v),1);
   Object.values(agg).sort((a,b)=>b.v-a.v).forEach(a=>{ const [x1,y1]=P(INS.plantas[a.o].lat,INS.plantas[a.o].lon), [x2,y2]=P(INS.cedis[a.d].lat,INS.cedis[a.d].lon);
     const ln=sv("line",{x1,y1,x2,y2,stroke:plantColor[a.o],"stroke-width":(1+7*Math.sqrt(a.v/maxV)).toFixed(1),"stroke-linecap":"round","stroke-opacity":.75}); s.append(ln);
     bindTip(ln,()=>`<b>${INS.plantas[a.o].nombre} → ${INS.cedis[a.d].nombre}</b><br>${nf0.format(a.v)} m³/mes · ${MM(a.c)} flete<br>${Object.entries(a.fam).map(([f,v])=>tit(f)+": "+nf0.format(v)+" m³").join("<br>")}`); });
   const plPix=PL.map(i=>P(INS.plantas[i].lat,INS.plantas[i].lon));
   CE.forEach(j=>{ const c=INS.cedis[j], [x,y]=P(c.lat,c.lon); const cerca=plPix.some(([px,py])=>Math.hypot(px-x,py-y)<40);
-    s.append(sv("circle",{cx:x,cy:y,r:5,fill:"var(--surface)",stroke:"var(--ink-2)","stroke-width":2}));
-    const t=sv("text",cerca?{x:x-8,y:y+17,"text-anchor":"end"}:{x:x+8,y:y+4}); t.textContent=c.ciudad; s.append(t); });
+    const cd=r.cedis&&r.cedis[j], alerta=cd&&cd.exceso_estibas>0.5;
+    s.append(sv("circle",{cx:x,cy:y,r:5,fill:alerta?"var(--bad)":"var(--surface)",stroke:"var(--ink-2)","stroke-width":2}));
+    const t=sv("text",cerca?{x:x-8,y:y+17,"text-anchor":"end"}:{x:x+8,y:y+4}); t.textContent=c.ciudad+(alerta?" ⚠":""); s.append(t); });
   PL.forEach(i=>{ const p=INS.plantas[i], [x,y]=P(p.lat,p.lon), ab=r.uso[i].capacidad>0;
     const q=sv("rect",{x:x-8,y:y-8,width:16,height:16,rx:3,fill:ab?plantColor[i]:"var(--surface)",stroke:ab?"var(--surface)":"var(--muted)","stroke-width":2,"stroke-dasharray":ab?"":"3 2"}); s.append(q);
     const t=sv("text",{x:x+11,y:y-9,"font-weight":"600"}); t.textContent=p.ciudad+(ab?"":" (cerrada)"); t.style.fill="var(--ink)"; s.append(t);
     bindTip(q,()=>`<b>${p.nombre}</b><br>${ab?nf0.format(r.uso[i].produccion)+" m³/mes · "+pct(r.uso[i].utilizacion):"Cerrada"}`); });
   const lg=el("div",{class:"legend"}); PL.forEach(i=>lg.append(el("span",{},`<span class="sw" style="background:${plantColor[i]}"></span>${INS.plantas[i].nombre}`)));
-  lg.append(el("span",{},"■ planta · ○ CEDI · grosor = m³/mes"));
+  lg.append(el("span",{},"■ planta · ○ CEDI (rojo = desborde de posiciones) · grosor = m³/mes"));
   container.innerHTML=""; container.append(s, lg);
 }
 
-/* ======================= Resumen ======================= */
+/* ======================= Escenarios (Python + guardados + simulación) ======================= */
 const ESC = DATA.escenarios, E0 = ESC[0];
-function deltaHTML(v,base){ const d=v-base; if(Math.abs(d)<1) return "—"; return `<span class="${d>0?"up":"down"}">${d>0?"▲ +":"▼ −"}${MM(Math.abs(d))}</span>`; }
+let GUARD = (store.get("red_guardados_v2")||[]).filter(g=>g && g.cfg && g.costos);
+let cfg=null, ULT=null, presetSel=null;
+function todos(){ const l=ESC.map(e=>({id:e.id,nombre:e.id+" · "+e.nombre,res:e,cfg:e.config,origen:"python"}));
+  GUARD.forEach((g,k)=>l.push({id:"G"+k,nombre:"★ "+g.nombre,res:g,cfg:g.cfg,origen:"guardado"}));
+  if(ULT) l.push({id:"SIM",nombre:"◆ Simulación actual",res:ULT,cfg,origen:"sim"});
+  return l; }
+const buscar = id => todos().find(x=>x.id===id) || {id:"E0",nombre:"E0 · "+E0.nombre,res:E0};
+function deltaHTML(v,base){ const d=v-base; if(Math.abs(d)<0.5e6) return "—"; return `<span class="${d>0?"pos":"neg"}">${d>0?"▲ +":"▼ −"}${MM(Math.abs(d)).replace("−","")}</span>`; }
+function llenarSelect(sel, val, conSim=true){ const v=val||sel.value; sel.innerHTML="";
+  todos().filter(x=>conSim||x.id!=="SIM").forEach(x=>sel.append(el("option",{value:x.id},x.nombre)));
+  if([...sel.options].some(o=>o.value===v)) sel.value=v; }
+
+/* ======================= Resumen ======================= */
 function renderResumen(){
   const cand=ESC.filter(e=>e.id!=="E0" && !e.sensibilidad);
   const best=cand.length?cand.reduce((a,b)=>a.costos.total<b.costos.total?a:b):E0;
   const k=$("#kpisResumen"); k.innerHTML="";
   kpi(k,"Demanda (base)", nf0.format(E0.demanda_m3)+" m³/mes", DATA.historico.meses+" meses de historia");
-  kpi(k,"Flete AS-IS histórico", MM(DATA.historico.flete_mes), "E0 optimizado: "+MM(E0.costos.flete));
-  kpi(k,"Planta que cierra", CIERRE?INS.plantas[CIERRE].nombre:"—", CIERRE?"según maestro de nodos":"sin Fecha_Cierre en nodos");
+  kpi(k,"Logística E0 (transporte + almac.)", MM(logistica(E0.costos)), "Transporte "+MM(E0.costos.flete)+" · Almac. "+MM(logistica(E0.costos)-E0.costos.flete));
+  kpi(k,"Planta que cierra", CIERRE?INS.plantas[CIERRE].nombre:"—");
   kpi(k,"Mejor escenario de cierre", best.id, best.nombre);
-  kpi(k,"Δ vs E0 (mensual / anual)", deltaHTML(best.costos.total,E0.costos.total), "Anual: "+deltaHTML(12*best.costos.total,12*E0.costos.total));
-  hbar($("#chartEsc"), ESC.map(e=>({label:e.id+" · "+e.nombre_corto, value:e.costos.total, color:"var(--s1)",
-    tip:`<b>${e.nombre}</b><br>Total: ${MM(e.costos.total)}<br>Δ vs E0: ${deltaHTML(e.costos.total,E0.costos.total)}`})), Math.min(250, ($("#chartEsc").clientWidth||600)*0.4));
-  $("#tblEsc").innerHTML=`<tr><th>Escenario</th><th class="n">Costo total</th><th class="n">Δ vs E0</th><th class="n">Producción</th><th class="n">Flete</th><th class="n">Fijo</th><th class="n">Traslado líneas</th><th class="n">Maquila + no atendida</th><th class="n">COP/m³</th><th class="n">Km prom.</th><th>Traslados de línea</th></tr>`+
-   ESC.map(e=>`<tr><td><b>${e.id}</b> ${e.nombre}<div class="note">${e.descripcion}</div></td><td class="n">${MM(e.costos.total)}</td><td class="n">${deltaHTML(e.costos.total,E0.costos.total)}</td>
-   <td class="n">${MM(e.costos.produccion+e.costos.horas_extra)}</td><td class="n">${MM(e.costos.flete)}</td><td class="n">${MM(e.costos.fijo)}</td><td class="n">${MM(e.costos.capex)}</td>
-   <td class="n">${MM(e.costos.maquila+e.costos.penalidad)}</td><td class="n">${nf0.format(e.costo_por_m3)}</td><td class="n">${nf0.format(e.km_promedio)}</td><td class="tr">${fmtTr(e.traslados)}</td></tr>`).join("");
-  $("#tblPlan").innerHTML = DATA.plan_detalle.length ? `<tr><th>Familia</th><th>Situación post-cambio</th><th>Planta nueva</th><th class="n">Referencias</th><th class="n">Volumen histórico m³</th></tr>`+
+  kpi(k,"Δ vs E0 (mensual)", deltaHTML(best.costos.total,E0.costos.total), "Anual: "+deltaHTML(12*best.costos.total,12*E0.costos.total));
+  stackedBars($("#chartEsc"), ESC.map(e=>({label:e.id+" · "+e.nombre_corto,total:e.costos.total,cats:categorias(e.costos)})));
+  const cats=categorias(E0.costos);
+  $("#tblEsc").innerHTML=`<tr><th>Escenario</th><th class="n">Total</th><th class="n">Δ vs E0</th>${cats.map(c=>`<th class="n">${c.label}</th>`).join("")}<th class="n">COP/m³</th><th class="n">Km prom.</th><th>Traslados de línea</th></tr>`+
+    ESC.map(e=>`<tr><td><b>${e.id}</b> ${e.nombre}<div class="note">${e.descripcion}</div></td><td class="n">${MM(e.costos.total)}</td><td class="n">${deltaHTML(e.costos.total,E0.costos.total)}</td>
+    ${categorias(e.costos).map(c=>`<td class="n">${MM(c.value)}</td>`).join("")}<td class="n">${nf0.format(e.costo_por_m3)}</td><td class="n">${nf0.format(e.km_promedio)}</td><td class="tr">${fmtTr(e.traslados)}</td></tr>`).join("");
+  const H=DATA.historico, pf=H.por_fuente||{}, fi=H.flete_imputado||{};
+  $("#tblFleteHist").innerHTML=`<tr><th>Fuente del flete</th><th class="n">Líneas</th><th class="n">m³/mes</th><th class="n">Flete/mes</th></tr>`+
+    Object.entries(pf).map(([k,v])=>`<tr><td>${k}</td><td class="n">${nf0.format(v.lineas)}</td><td class="n">${nf0.format(v.m3_mes)}</td><td class="n">${MM(v.importe_mes)}</td></tr>`).join("")+
+    `<tr><td><b>Total con imputación</b></td><td></td><td class="n"><b>${nf0.format(H.m3_mes)}</b></td><td class="n"><b>${MM(H.flete_mes)}</b></td></tr>`;
+  $("#notaFlete").innerHTML=`Solo con lo que liquida SAP el flete sería ${MM(H.flete_sap_sin_imputar_mes)}/mes: se subestimaría en ${pct(1-H.flete_sap_sin_imputar_mes/H.flete_mes)} porque la flota propia (${pct(H.pct_volumen_propia)} del volumen) queda en 0 o 1 peso. Costo por km usado: ${nf0.format(fi.cop_km)} COP/km${fi.cop_km_derivado?` (terceros: ${nf0.format(fi.cop_km_derivado)} COP/km)`:""}, ${nf0.format(fi.vol_viaje_propio)} m³ por viaje propio. El flete de E0 (${MM(E0.costos.flete)}) es la red optimizada, sin re-expediciones CEDI→CEDI.`;
+  $("#tblPlan").innerHTML = DATA.plan_detalle.length ? `<tr><th>Familia</th><th>Situación</th><th>Planta nueva</th><th class="n">Refs</th><th class="n">m³ hist.</th></tr>`+
     DATA.plan_detalle.map(r=>`<tr><td>${tit(r.familia)}</td><td>${tit(r.situacion)}</td><td>${INS.plantas[r.planta_nueva]?INS.plantas[r.planta_nueva].nombre:r.planta_nueva}</td><td class="n">${r.referencias}</td><td class="n">${nf0.format(r.vol_hist_m3)}</td></tr>`).join("")
     : `<tr><td>No hay planta en cierre o referencias asociadas.</td></tr>`;
 }
 
-/* ======================= Simulador ======================= */
-let cfg=null;
-function cfgDesde(e){ const c=e.config; return {abiertas:{...c.abiertas},cap_pct:{...c.cap_pct},traslados:JSON.parse(JSON.stringify(e.traslados)),aplicar_desc:c.aplicar_desc,
-  g:c.crec_demanda,ff:c.indice_flete,fp:c.indice_produccion,he_pct:INS.he_max_pct,maq_cap:INS.maquila_cap,meses:INS.meses_amortizacion}; }
-function slider(parent,label,get,set,min,max,step,fmt){
-  const w=el("div"); w.append(el("label",{class:"ctl"},label));
+/* ======================= Simulador: controles ======================= */
+function cfgDe(item){ return Object.assign(clone(BASECFG), clone(item.cfg||item.config||{})); }
+function slider(parent,label,get,set,min,max,step,fmt,hint=""){
+  const w=el("div"); w.append(el("label",{class:"ctl"},label+(hint?` <span class="mini">${hint}</span>`:"")));
   const r=el("div",{class:"ctlrow"}); const i=el("input",{type:"range",min,max,step,"aria-label":label}); const o=el("output");
   i.value=get(); o.textContent=fmt(+i.value);
   i.oninput=()=>{ set(+i.value); o.textContent=fmt(+i.value); recalc(); };
-  r.append(i,o); w.append(r); parent.append(w);
+  r.append(i,o); w.append(r); parent.append(w); return i;
 }
+function check(parent,label,get,set,onch){ const l=el("label",{class:"ctlrow",style:"margin-top:8px;font-size:13px"}); const c=el("input",{type:"checkbox"}); c.checked=get();
+  c.onchange=()=>{ set(c.checked); if(onch) onch(); recalc(); }; l.append(c, el("span",{},label)); parent.append(l); return c; }
+function radios(parent,name,opts,get,set){ const d=el("div",{class:"radio"}); opts.forEach(([v,l])=>{ const lab=el("label",{}); const r=el("input",{type:"radio",name,value:v}); r.checked=get()===v;
+  r.onchange=()=>{ if(r.checked){ set(v); recalc(); } }; lab.append(r, document.createTextNode(" "+l)); d.append(lab); }); parent.append(d); }
+const P100 = v=>Math.round(v*100)+" %", PPM = v=>(v>=0?"+":"")+Math.round(v*100)+" %", CO = v=>nf0.format(v);
 function buildControls(){
   const cp=$("#ctlPlantas"); cp.innerHTML="";
-  PL.forEach(i=>{ const row=el("div",{class:"plantrow"});
-    const lab=el("label",{class:"ctlrow"}); const cb=el("input",{type:"checkbox"}); cb.checked=cfg.abiertas[i];
-    cb.onchange=()=>{cfg.abiertas[i]=cb.checked; buildLineas(); recalc();};
+  PL.forEach(i=>{ const row=el("div",{class:"plantrow"}); const p=INS.plantas[i];
     const capT=FA.reduce((a,f)=>a+(INS.cap[i+"|"+f]||0),0);
-    lab.append(cb, el("span",{},`<span class="sw" style="background:${plantColor[i]}"></span><b>${INS.plantas[i].nombre}</b> <span class="note">${nf0.format(capT)} m³/mes${i===CIERRE?" · en cierre":""}</span>`));
-    row.append(lab); slider(row,"Capacidad disponible",()=>cfg.cap_pct[i],v=>cfg.cap_pct[i]=v,0.5,1.3,0.05,v=>Math.round(v*100)+" %");
+    check(row,`<span class="sw" style="background:${plantColor[i]}"></span><b>${p.nombre}</b> <span class="mini">${nf0.format(capT)} m³/mes${i===CIERRE?" · en cierre":""}</span>`,()=>cfg.abiertas[i],v=>cfg.abiertas[i]=v,buildLineas);
+    slider(row,"Capacidad disponible",()=>cfg.cap_pct[i],v=>cfg.cap_pct[i]=v,0.5,1.5,0.05,P100);
+    slider(row,"Costo variable de producción",()=>cfg.cv_pct[i],v=>cfg.cv_pct[i]=v,0.7,1.3,0.01,P100);
+    slider(row,"Costo fijo",()=>cfg.fijo_pct[i],v=>cfg.fijo_pct[i]=v,0.5,1.3,0.05,P100,MM(p.costo_fijo));
     cp.append(row); });
+  if(CIERRE) slider(cp,"Costo fijo residual de la planta cerrada",()=>cfg.residual_cierre,v=>cfg.residual_cierre=v,0,0.6,0.05,P100,"vigilancia, impuestos hasta venderla");
   buildLineas();
-  const cg=$("#ctlGlobal"); cg.innerHTML="";
-  const dl=el("label",{class:"ctlrow",style:"margin-top:8px"}); const dc=el("input",{type:"checkbox"}); dc.checked=cfg.aplicar_desc;
-  dc.onchange=()=>{cfg.aplicar_desc=dc.checked; recalc();}; dl.append(dc, el("span",{},"Descontar referencias descontinuadas sin sustituta")); cg.append(dl);
-  slider(cg,"Crecimiento de demanda",()=>cfg.g,v=>cfg.g=v,-0.2,0.3,0.01,v=>(v>=0?"+":"")+Math.round(v*100)+" %");
-  slider(cg,"Índice de flete (ACPM, peajes, tarifas)",()=>cfg.ff,v=>cfg.ff=v,0.8,1.5,0.01,v=>Math.round(v*100)+" %");
-  slider(cg,"Índice de costo de producción",()=>cfg.fp,v=>cfg.fp=v,0.8,1.3,0.01,v=>Math.round(v*100)+" %");
-  slider(cg,"Horas extra máximas (% capacidad)",()=>cfg.he_pct,v=>cfg.he_pct=v,0,0.3,0.01,v=>Math.round(v*100)+" %");
-  slider(cg,"Capacidad de maquila (m³/mes)",()=>cfg.maq_cap,v=>cfg.maq_cap=v,0,10000,250,v=>nf0.format(v));
-  slider(cg,"Meses de amortización del traslado",()=>cfg.meses,v=>cfg.meses=v,12,120,6,v=>v+" m");
+  const cd=$("#ctlDemanda"); cd.innerHTML="";
+  check(cd,"Descontar referencias descontinuadas sin sustituta",()=>cfg.aplicar_desc,v=>cfg.aplicar_desc=v);
+  slider(cd,"Crecimiento total de demanda",()=>cfg.g,v=>cfg.g=v,-0.3,0.4,0.01,PPM);
+  cd.append(el("div",{class:"mini",style:"margin-top:10px"},"Por familia"));
+  FA.forEach(f=>slider(cd,tit(f),()=>cfg.g_fam[f],v=>cfg.g_fam[f]=v,-0.5,0.5,0.01,PPM));
+  const dd=el("details",{class:"acc"}); dd.append(el("summary",{},"Por CEDI")); const din=el("div",{class:"in"}); dd.append(din); cd.append(dd);
+  CE.forEach(j=>slider(din,INS.cedis[j].nombre,()=>cfg.g_cedi[j],v=>cfg.g_cedi[j]=v,-0.5,0.5,0.01,PPM));
+  const ct=$("#ctlTransporte"); ct.innerHTML="";
+  slider(ct,"Índice de flete (ACPM, peajes, tarifas)",()=>cfg.ff,v=>cfg.ff=v,0.7,1.6,0.01,P100);
+  slider(ct,"Prima en rutas nuevas (sin tarifa negociada)",()=>cfg.prima_nuevas,v=>cfg.prima_nuevas=v,0,0.4,0.01,PPM);
+  ct.append(el("div",{class:"mini",style:"margin-top:10px"},"Costo de la flota propia (viajes que SAP deja en 0 o 1 peso)"));
+  radios(ct,"metodo",[["mixto","Viajes similares; si no hay, costo por km"],["km","Siempre costo por km"]],()=>cfg.metodo,v=>cfg.metodo=v);
+  slider(ct,"Costo por km flota propia",()=>cfg.cop_km,v=>cfg.cop_km=v,2000,14000,100,v=>CO(v)+" COP",`dato: ${CO(INS.cop_km_flota)}`);
+  slider(ct,"Factor de retorno (1,0 = solo ida)",()=>cfg.fr,v=>cfg.fr=v,1,2,0.05,v=>nf2.format(v));
+  ct.append(el("div",{class:"mini",style:"margin-top:10px"},"Participación de la flota propia en el volumen"));
+  radios(ct,"share",[["hist","Histórica de cada ruta"],["global","Igual en todas"]],()=>cfg.share_mode,v=>cfg.share_mode=v);
+  slider(ct,"Participación (si es igual en todas)",()=>cfg.share,v=>cfg.share=v,0,1,0.05,P100,`histórica: ${P100(INS.share_propia_global)}`);
+  const ca=$("#ctlAlm"); ca.innerHTML="";
+  slider(ca,"Índice costo de manejo (recibo + despacho)",()=>cfg.manejo_idx,v=>cfg.manejo_idx=v,0.5,1.6,0.01,P100);
+  slider(ca,"Índice costo de posición propia",()=>cfg.pos_idx,v=>cfg.pos_idx=v,0.5,1.6,0.01,P100);
+  slider(ca,"Índice costo bodega externa (desborde)",()=>cfg.ext_idx,v=>cfg.ext_idx=v,0.5,2,0.01,P100);
+  slider(ca,"Días de cobertura en CEDI (ajuste)",()=>cfg.dias_delta,v=>cfg.dias_delta=v,-6,10,0.5,v=>(v>=0?"+":"")+nf1.format(v)+" d");
+  slider(ca,"Días extra por cada 1.000 km a la planta",()=>cfg.dias_1000,v=>cfg.dias_1000=v,0,12,0.5,v=>nf1.format(v)+" d");
+  slider(ca,"Posiciones disponibles en CEDI",()=>cfg.pos_cap_pct,v=>cfg.pos_cap_pct=v,0.5,1.5,0.05,P100);
+  slider(ca,"Días de inventario en planta (ajuste)",()=>cfg.dias_planta_delta,v=>cfg.dias_planta_delta=v,-5,10,0.5,v=>(v>=0?"+":"")+nf1.format(v)+" d");
+  const cr=$("#ctlProd"); cr.innerHTML="";
+  slider(cr,"Índice de costo de producción",()=>cfg.fp,v=>cfg.fp=v,0.8,1.3,0.01,P100);
+  slider(cr,"Horas extra máximas (% capacidad)",()=>cfg.he_pct,v=>cfg.he_pct=v,0,0.3,0.01,P100);
+  slider(cr,"Sobrecosto de horas extra",()=>cfg.he_sobre,v=>cfg.he_sobre=v,0,0.6,0.01,P100);
+  slider(cr,"Capacidad de maquila (m³/mes)",()=>cfg.maq_cap,v=>cfg.maq_cap=v,0,12000,250,CO);
+  slider(cr,"Sobrecosto de maquila",()=>cfg.maq_pct,v=>cfg.maq_pct=v,0,1,0.01,P100);
+  slider(cr,"Penalidad por m³ no atendido",()=>cfg.penalidad,v=>cfg.penalidad=v,500000,6000000,100000,v=>"$"+nf1.format(v/1e6)+" M");
+  const cf=$("#ctlFin"); cf.innerHTML="";
+  slider(cf,"Índice CAPEX de traslado",()=>cfg.capex_idx,v=>cfg.capex_idx=v,0.5,2,0.05,P100);
+  slider(cf,"Meses de amortización",()=>cfg.meses,v=>cfg.meses=v,12,120,6,v=>v+" m");
+  slider(cf,"Costo único de cierre (liquidaciones, desmonte)",()=>cfg.costo_cierre_unico,v=>cfg.costo_cierre_unico=v,0,30e9,0.5e9,v=>MM(v),"solo para el payback");
 }
 function buildLineas(){
   const cl=$("#ctlLineas"); cl.innerHTML="";
-  if(!CIERRE){ cl.append(el("p",{class:"note"},"No hay planta en cierre en el maestro de nodos.")); $("#btnOpt").disabled=true; return; }
-  if(cfg.abiertas[CIERRE]){ cl.append(el("p",{class:"note"},`${INS.plantas[CIERRE].nombre} está abierta: no hay líneas para trasladar. Desmárquela para simular el cierre.`)); $("#btnOpt").disabled=true; return; }
-  $("#btnOpt").disabled=false;
+  if(!CIERRE){ cl.append(el("p",{class:"note"},"No hay planta en cierre en el maestro de nodos.")); return; }
+  if(cfg.abiertas[CIERRE]){ cl.append(el("p",{class:"note"},`${INS.plantas[CIERRE].nombre} está abierta: desmárquela en «Plantas» para simular el cierre y trasladar líneas.`)); return; }
   FA.filter(f=>(INS.cap_traslado[f]||0)>0).forEach(f=>{ const w=el("div");
-    w.append(el("label",{class:"ctl"},`${tit(f)} <span class="note">(+${nf0.format(INS.cap_traslado[f])} m³/mes · CAPEX ${MM(INS.capex[f])})</span>`));
+    w.append(el("label",{class:"ctl"},`${tit(f)} <span class="mini">+${nf0.format(INS.cap_traslado[f])} m³/mes · CAPEX ${MM(INS.capex[f]*cfg.capex_idx)}</span>`));
     const s=el("select",{style:"width:100%"}); s.append(el("option",{value:""},"No trasladar"));
-    if(INS.plan[f]) s.append(el("option",{value:"__plan"},"Según maestro de referencias: "+Object.entries(INS.plan[f]).map(([p,v])=>nomP(p)+" "+Math.round(v*100)+" %").join(", ")));
+    if(INS.plan[f]) s.append(el("option",{value:"__plan"},"Maestro de referencias: "+Object.entries(INS.plan[f]).map(([p,v])=>nomP(p)+" "+Math.round(v*100)+" %").join(", ")));
     PL.filter(p=>p!==CIERRE && cfg.abiertas[p]).forEach(p=>s.append(el("option",{value:p},"→ "+INS.plantas[p].nombre)));
     const cur=cfg.traslados[f]; const ks=cur?Object.keys(cur):[];
-    s.value = !ks.length ? "" : (ks.length===1 && cur[ks[0]]>0.999 ? ks[0] : "__plan");
-    s.onchange=()=>{ if(!s.value) delete cfg.traslados[f]; else if(s.value==="__plan") cfg.traslados[f]={...INS.plan[f]}; else cfg.traslados[f]={[s.value]:1};
-      $("#optNote").textContent=""; recalc(); };
+    s.value=!ks.length?"":(ks.length===1&&cur[ks[0]]>0.999?ks[0]:"__plan");
+    s.onchange=()=>{ if(!s.value) delete cfg.traslados[f]; else if(s.value==="__plan") cfg.traslados[f]={...INS.plan[f]}; else cfg.traslados[f]={[s.value]:1}; $("#optNote").textContent=""; recalc(); };
     w.append(s); cl.append(w); });
+  const b=el("button",{class:"btn primary",style:"margin-top:10px"},"Optimizar traslados"); const n=el("p",{class:"mini",id:"optNote"});
+  b.onclick=()=>{ const t0=performance.now(); const r=optimizarTraslados(cfg); cfg.traslados=r.traslados; buildLineas(); recalc();
+    $("#optNote").textContent=`Óptimo exacto: ${r.evaluadas} combinaciones evaluadas en ${Math.round(performance.now()-t0)} ms.`; };
+  cl.append(b,n);
 }
-$("#btnOpt").onclick=()=>{ const t0=performance.now(); const r=optimizarTraslados(cfg); cfg.traslados=r.traslados; buildLineas(); recalc();
-  $("#optNote").textContent=`Óptimo exacto por enumeración: ${r.evaluadas} combinaciones evaluadas en ${Math.round(performance.now()-t0)} ms.`; };
+function renderGuardados(){ const L=$("#listaGuardados"); L.innerHTML=GUARD.length?"":"Aún no hay escenarios guardados. Quedan en este navegador.";
+  GUARD.forEach((g,k)=>{ const r=el("div",{class:"saved"}); r.append(el("span",{},`★ ${g.nombre} <span class="mini">${MM(g.costos.total)}</span>`));
+    const bs=el("span",{}); const a=el("button",{class:"btn",title:"Cargar"},"Cargar"), d=el("button",{class:"btn",title:"Eliminar"},"✕");
+    a.onclick=()=>{ cfg=cfgDe(g); presetSel="G"+k; buildControls(); recalc(); }; d.onclick=()=>{ GUARD.splice(k,1); store.set("red_guardados_v2",GUARD); renderGuardados(); renderTodo(); };
+    bs.append(a,d); r.append(bs); L.append(r); }); }
+$("#btnGuardar").onclick=()=>{ if(!ULT) return; const nom=($("#nomEsc").value||"").trim()||("Escenario "+(GUARD.length+1));
+  GUARD.push({nombre:nom,cfg:clone(cfg),costos:ULT.costos,traslados:ULT.traslados,demanda_m3:ULT.demanda_m3,costo_por_m3:ULT.costo_por_m3,km_promedio:ULT.km_promedio,maquila_m3:ULT.maquila_m3,no_atendida_m3:ULT.no_atendida_m3});
+  store.set("red_guardados_v2",GUARD); $("#nomEsc").value=""; renderGuardados(); llenarSelect($("#baseSim")); };
+$("#btnReset").onclick=()=>{ const it=buscar($("#preset").value); cfg=cfgDe(it); buildControls(); recalc(); };
 
-let simIniciado=false;
-function renderSim(){ if(!simIniciado){ simIniciado=true;
-  const ps=$("#preset"); ESC.forEach((e,k)=>ps.append(el("option",{value:k},e.id+" · "+e.nombre)));
-  const ini=Math.min(2,ESC.length-1); ps.value=ini;
-  ps.onchange=()=>{cfg=cfgDesde(ESC[+ps.value]); buildControls(); $("#optNote").textContent=""; recalc();};
-  cfg=cfgDesde(ESC[ini]); buildControls(); }
-  recalc(); }
-let raf=0; function recalc(){ cancelAnimationFrame(raf); raf=requestAnimationFrame(pintarSim); }
+let simIni=false;
+function initSim(){ if(simIni) return; simIni=true;
+  const ps=$("#preset"); ESC.forEach(e=>ps.append(el("option",{value:e.id},e.id+" · "+e.nombre)));
+  const ini=ESC.find(e=>e.id==="E2")||ESC[0]; ps.value=ini.id;
+  ps.onchange=()=>{ cfg=cfgDe(buscar(ps.value)); buildControls(); recalc(); };
+  cfg=cfgDe(ini); buildControls(); renderGuardados();
+  llenarSelect($("#baseSim"),"E0",false); $("#baseSim").onchange=()=>pintarSim(); }
+let raf=0; function recalc(){ cancelAnimationFrame(raf); raf=requestAnimationFrame(()=>{ ULT=resolverRed(cfg); pintarSim(); }); }
 function pintarSim(){
-  const r=resolverRed(cfg), b=E0;
+  if(!ULT) ULT=resolverRed(cfg);
+  const r=ULT, bItem=buscar($("#baseSim").value||"E0"), b=bItem.res;
+  const inversion=Object.entries(r.traslados).reduce((a,[f,d])=>a+Object.values(d).reduce((x,w)=>x+INS.capex[f]*cfg.capex_idx*w,0),0)+cfg.costo_cierre_unico;
+  const ahorroOp=(b.costos.total-b.costos.capex)-(r.costos.total-r.costos.capex);
   const k=$("#kpisSim"); k.innerHTML="";
-  kpi(k,"Costo total mensual", MM(r.costos.total), "Δ vs E0: "+deltaHTML(r.costos.total,b.costos.total));
-  kpi(k,"Δ anual vs E0", deltaHTML(12*r.costos.total,12*b.costos.total));
-  kpi(k,"Costo por m³", "$"+nf0.format(r.costo_por_m3), "E0: $"+nf0.format(b.costo_por_m3));
-  kpi(k,"Flete primario", MM(r.costos.flete), "Δ "+deltaHTML(r.costos.flete,b.costos.flete));
-  kpi(k,"Km promedio ponderado", nf0.format(r.km_promedio)+" km", "E0: "+nf0.format(b.km_promedio)+" km");
-  kpi(k,"Maquila / no atendida", nf0.format(r.maquila_m3)+" / "+nf0.format(r.no_atendida_m3)+" m³", r.no_atendida_m3>1?'<span class="up">⚠ hay demanda sin atender</span>':"Demanda cubierta");
-  stacked($("#chartComp"),[{label:"Simulado",c:comps(r.costos)},{label:"E0",c:comps(b.costos)}]);
+  kpi(k,"Costo total mensual", MM(r.costos.total), "Δ vs base: "+deltaHTML(r.costos.total,b.costos.total));
+  kpi(k,"Δ anual vs base", deltaHTML(12*r.costos.total,12*b.costos.total), bItem.nombre);
+  kpi(k,"Logística (transp. + almac.)", MM(logistica(r.costos)), "Transp. "+MM(r.costos.flete)+" · Almac. "+MM(logistica(r.costos)-r.costos.flete));
+  kpi(k,"Costo por m³", "$"+nf0.format(r.costo_por_m3), "base: $"+nf0.format(b.costo_por_m3));
+  kpi(k,"Payback de la inversión", inversion<=0?"—":(ahorroOp>0?nf1.format(inversion/ahorroOp)+" meses":"no se recupera"), "Inversión "+MM(inversion)+" · ahorro operativo "+MM(ahorroOp)+"/mes");
+  kpi(k,"Maquila / no atendida", nf0.format(r.maquila_m3)+" / "+nf0.format(r.no_atendida_m3)+" m³", r.no_atendida_m3>1?'<span class="pos">⚠ hay demanda sin atender</span>':"Demanda cubierta");
+  waterfall($("#wfSim"), b.costos, r.costos, "Base: "+bItem.nombre.replace(/^[★◆]\s*/,"").slice(0,32), "Simulado");
+  stackedBars($("#chartComp"),[{label:"Simulado",total:r.costos.total,cats:categorias(r.costos)},{label:"Base",total:b.costos.total,cats:categorias(b.costos)}],90);
   usoChart($("#chartUso"), r); mapa($("#mapa"), r);
-  // Recibo CEDI
-  const filas=CE.map(j=>{ const rc=INS.cedis[j].recibo; const est=FA.reduce((a,f)=>a+(r.D[j+"|"+f]||0)/(INS.m3_estiba[f]||1.7),0)/INS.dias_mes;
-    if(!rc||!rc.cap_recibo_estibas_dia) return `<tr><td>${INS.cedis[j].nombre}</td><td class="n">${nf0.format(est)}</td><td class="n">—</td><td class="n">—</td><td class="note">Sin dato en Info_CEDI</td></tr>`;
-    const u=est/rc.cap_recibo_estibas_dia, alerta=u>rc.util_max;
-    return `<tr><td>${INS.cedis[j].nombre}</td><td class="n">${nf0.format(est)}</td><td class="n">${nf0.format(rc.cap_recibo_estibas_dia)}</td><td class="n">${pct(u)}</td><td>${alerta?`<span class="up">⚠ supera el máximo operable (${pct(rc.util_max)})</span>`:`<span class="down">✓ dentro del máximo (${pct(rc.util_max)})</span>`}</td></tr>`; });
-  $("#tblRecibo").innerHTML=`<tr><th>CEDI</th><th class="n">Estibas/día a recibir</th><th class="n">Capacidad estibas/día</th><th class="n">Uso</th><th>Estado</th></tr>`+filas.join("");
-  const agg={}; r.flujos.forEach(f=>{ const kk=f.origen+"|"+f.destino; (agg[kk]??={o:f.origen,d:f.destino,v:0,c:0,fam:{}}); agg[kk].v+=f.m3; agg[kk].c+=f.m3*f.tarifa; agg[kk].fam[f.familia]=(agg[kk].fam[f.familia]||0)+f.m3; });
-  $("#tblFlujos").innerHTML=`<tr><th>Planta</th><th>CEDI</th>${FA.map(f=>`<th class="n">${tit(f)}</th>`).join("")}<th class="n">Total m³</th><th class="n">Km</th><th class="n">Flete/mes</th></tr>`+
-    Object.values(agg).sort((a,b)=>a.o.localeCompare(b.o)||b.v-a.v).map(a=>`<tr><td><span class="sw" style="background:${plantColor[a.o]}"></span>${nomP(a.o)}</td><td>${INS.cedis[a.d].ciudad}</td>${FA.map(f=>`<td class="n">${a.fam[f]?nf0.format(a.fam[f]):""}</td>`).join("")}<td class="n">${nf0.format(a.v)}</td><td class="n">${nf0.format(INS.km[a.o+"|"+a.d])}</td><td class="n">${MM(a.c)}</td></tr>`).join("");
+  $("#tblCedi").innerHTML=`<tr><th>CEDI</th><th class="n">Días cobertura</th><th class="n">Inventario (estibas)</th><th class="n">Posiciones disponibles</th><th class="n">Ocupación</th><th class="n">Desborde/mes</th><th class="n">Recibo estibas/día</th><th class="n">Uso recibo</th></tr>`+
+    CE.map(j=>{ const c=r.cedis[j], C=INS.cedis[j], rc=C.recibo; const oc=c.capacidad_estibas?c.inventario_estibas/c.capacidad_estibas:null;
+      const ur=rc&&rc.cap_recibo_estibas_dia?c.recibo_estibas_dia/rc.cap_recibo_estibas_dia:null;
+      return `<tr><td>${C.nombre}</td><td class="n">${nf1.format(c.dias)}</td><td class="n">${nf0.format(c.inventario_estibas)}</td><td class="n">${c.capacidad_estibas?nf0.format(c.capacidad_estibas):"—"}</td>
+      <td class="n">${oc===null?"—":`<span class="${oc>1?"pos":""}">${pct(oc)}${oc>1?" ⚠":""}</span>`}</td><td class="n">${c.costo_desborde>0.5e6?MM(c.costo_desborde):"—"}</td>
+      <td class="n">${nf0.format(c.recibo_estibas_dia)}</td><td class="n">${ur===null?"—":`<span class="${ur>(rc.util_max||1)?"pos":""}">${pct(ur)}${ur>(rc.util_max||1)?" ⚠":""}</span>`}</td></tr>`; }).join("");
+  const agg={}; r.flujos.forEach(f=>{ const kk=f.origen+"|"+f.destino; (agg[kk]??={o:f.origen,d:f.destino,v:0,c:0,fam:{}}); agg[kk].v+=f.m3; agg[kk].c+=f.m3*f.flete; agg[kk].fam[f.familia]=(agg[kk].fam[f.familia]||0)+f.m3; });
+  $("#tblFlujos").innerHTML=`<tr><th>Planta</th><th>CEDI</th>${FA.map(f=>`<th class="n">${tit(f)}</th>`).join("")}<th class="n">Total m³</th><th class="n">Km</th><th class="n">COP/m³</th><th class="n">Flete/mes</th></tr>`+
+    Object.values(agg).sort((a,b)=>a.o.localeCompare(b.o)||b.v-a.v).map(a=>`<tr><td><span class="sw" style="background:${plantColor[a.o]}"></span>${nomP(a.o)}</td><td>${INS.cedis[a.d].ciudad}</td>${FA.map(f=>`<td class="n">${a.fam[f]?nf0.format(a.fam[f]):""}</td>`).join("")}<td class="n">${nf0.format(a.v)}</td><td class="n">${nf0.format(INS.km[a.o+"|"+a.d])}</td><td class="n">${nf0.format(a.c/a.v)}</td><td class="n">${MM(a.c)}</td></tr>`).join("");
+  if(TAB==="tarifas") renderTarifas();
 }
 
-/* ======================= Calidad ======================= */
-function renderCalidad(){
+/* ======================= Comparar ======================= */
+function renderComp(){
+  if(!ULT){ ULT=resolverRed(cfg||cfgDe(ESC.find(e=>e.id==="E2")||ESC[0])); }
+  llenarSelect($("#cmpA"),$("#cmpA").value||"E0"); llenarSelect($("#cmpB"),$("#cmpB").value||(ESC.find(e=>e.id==="E2")?"E2":"SIM"));
+  const A=buscar($("#cmpA").value), B=buscar($("#cmpB").value);
+  waterfall($("#wfComp"), A.res.costos, B.res.costos, A.nombre.replace(/^[★◆]\s*/,"").slice(0,34), B.nombre.replace(/^[★◆]\s*/,"").slice(0,34));
+  const L=todos(), cats=categorias(E0.costos);
+  $("#tblComp").innerHTML=`<tr><th>Escenario</th><th class="n">Total</th><th class="n">Δ vs ${A.id==="SIM"?"simulación":A.nombre.split(" ·")[0]}</th>${cats.map(c=>`<th class="n">${c.label}</th>`).join("")}<th class="n">Logística</th><th class="n">COP/m³</th><th>Traslados</th></tr>`+
+    L.map(x=>`<tr><td>${x.nombre}</td><td class="n">${MM(x.res.costos.total)}</td><td class="n">${deltaHTML(x.res.costos.total,A.res.costos.total)}</td>${categorias(x.res.costos).map(c=>`<td class="n">${MM(c.value)}</td>`).join("")}<td class="n">${MM(logistica(x.res.costos))}</td><td class="n">${nf0.format(x.res.costo_por_m3||0)}</td><td class="tr">${fmtTr(x.res.traslados)}</td></tr>`).join("");
+}
+$("#cmpA").onchange=renderComp; $("#cmpB").onchange=renderComp;
+$("#btnCsv").onclick=()=>{ const L=todos(), det=DET.map(d=>d[0]);
+  const rows=[["escenario","total",...det,"logistica","costo_por_m3"].join(";")].concat(L.map(x=>[x.nombre,x.res.costos.total,...det.map(k=>x.res.costos[k]||0),logistica(x.res.costos),x.res.costo_por_m3||0].map(v=>typeof v==="number"?Math.round(v).toString():`"${String(v).replace(/"/g,'""')}"`).join(";")));
+  const a=el("a",{href:URL.createObjectURL(new Blob(["﻿"+rows.join("\n")],{type:"text/csv"})),download:"comparativo_escenarios.csv"}); document.body.append(a); a.click(); a.remove(); };
+
+/* ======================= Calidad y tarifas ======================= */
+let calIni=false;
+function renderCalidad(){ if(calIni) return; calIni=true;
   const q=DATA.calidad, k=$("#kpisCal");
   kpi(k,"Registros SAP recibidos", nf0.format(q.resumen.registros_iniciales));
   kpi(k,"Traslados XI depurados", nf0.format(q.resumen.registros_xi_limpios), "base de la demanda");
-  kpi(k,"Válidos para tarifa", nf0.format(q.resumen.registros_validos_tarifa), pct(q.resumen.registros_validos_tarifa/q.resumen.registros_xi_limpios)+" de los XI");
+  kpi(k,"Flete de terceros (SAP)", nf0.format(q.resumen.registros_validos_tarifa)+" líneas", pct(q.resumen.registros_validos_tarifa/q.resumen.registros_xi_limpios)+" de los XI");
+  const fi=DATA.historico.flete_imputado||{};
+  kpi(k,"Flete imputado (flota propia)", nf0.format((fi.lineas_similares||0)+(fi.lineas_km||0))+" líneas", nf0.format(fi.lineas_similares||0)+" por viajes similares · "+nf0.format(fi.lineas_km||0)+" por km");
   kpi(k,"Match SAP ↔ TMS por viaje", q.match.hay_tms?pct(q.match.tasa_match):"Sin TMS", q.match.hay_tms?nf0.format(q.match.viajes_con_match)+" de "+nf0.format(q.match.viajes_sap)+" viajes":"");
-  if(q.resumen.clientes && q.resumen.clientes.match_maestro!==null) kpi(k,"Clientes que cruzan con maestro", pct(q.resumen.clientes.match_maestro), "líneas de distribución (no XI)");
   $("#hallazgos").innerHTML=q.hallazgos.map(h=>`<li>${h}</li>`).join("");
   const sel=$("#filtroTabla"); ["Todas",...new Set(q.bitacora.map(r=>r.tabla))].forEach(t=>sel.append(el("option",{value:t},t)));
   const pinta=()=>{ const t=sel.value; $("#tblCal").innerHTML=`<tr><th>Tabla</th><th>Regla</th><th>Validación</th><th>Acción</th><th class="n">Registros</th><th class="n">Volumen m³</th><th class="n">Importe</th></tr>`+
     q.bitacora.filter(r=>t==="Todas"||r.tabla===t).map(r=>`<tr${r.registros?"":' style="opacity:.55"'}><td>${r.tabla}</td><td>${r.regla}</td><td>${r.descripcion}</td><td>${r.accion}</td><td class="n">${nf0.format(r.registros)}</td><td class="n">${nf0.format(r.volumen_m3)}</td><td class="n">${MM(r.importe)}</td></tr>`).join(""); };
   sel.onchange=pinta; pinta();
 }
-
-/* ======================= Tarifas ======================= */
 function renderTarifas(){
   const T=DATA.tarifas, c=$("#chartReg");
   const W=Math.max(320,c.clientWidth||600), H=320, pl=64, pb=36, pr=16, pt=10;
@@ -481,22 +690,31 @@ function renderTarifas(){
   const ax=sv("text",{x:W/2,y:H-4,"text-anchor":"middle"}); ax.textContent="km de la ruta"; s.append(ax);
   const ay=sv("text",{x:12,y:H/2,transform:`rotate(-90 12 ${H/2})`,"text-anchor":"middle"}); ay.textContent="COP / m³"; s.append(ay);
   const R=T.regresion; s.append(sv("line",{x1:X(0),y1:Y(R.intercepto),x2:X(maxK),y2:Y(R.intercepto+R.pendiente*maxK),stroke:"var(--ink-2)","stroke-width":2,"stroke-dasharray":"6 4"}));
+  if(cfg){ const vp=INS.vol_viaje_propio; s.append(sv("line",{x1:X(0),y1:Y(0),x2:X(maxK),y2:Y(cfg.cop_km*maxK*cfg.fr/vp),stroke:"var(--s2)","stroke-width":2,"stroke-dasharray":"2 3"})); }
   pts.forEach(p=>{ const hist=p.viajes>=DATA.min_viajes;
-    const ci=sv("circle",{cx:X(p.km),cy:Y(p.cop_m3),r:Math.max(4,Math.min(10,2+Math.sqrt(p.m3_mes)/6)),fill:hist?"var(--s1)":"var(--s2)",stroke:"var(--surface)","stroke-width":2,"fill-opacity":.85}); s.append(ci);
-    bindTip(ci,()=>`<b>${INS.plantas[p.origen]?.nombre||p.origen} → ${INS.cedis[p.destino]?.nombre||p.destino}</b><br>${nf0.format(p.km)} km · $${nf0.format(p.cop_m3)}/m³<br>${nf0.format(p.viajes)} viajes válidos · ${nf0.format(p.m3_mes)} m³/mes${p.utilizacion?"<br>Ocupación vehículo (TMS): "+pct(p.utilizacion):""}`); });
-  c.innerHTML=""; c.append(s, el("div",{class:"legend"},`<span><span class="sw" style="background:var(--s1)"></span>Ruta con historia suficiente (≥ ${DATA.min_viajes} viajes)</span><span><span class="sw" style="background:var(--s2)"></span>Pocos viajes</span><span>– – regresión</span>`));
-  $("#regNote").innerHTML=`Regresión ponderada por volumen: <b>COP/m³ = ${nf0.format(R.intercepto)} + ${nf1.format(R.pendiente)} × km</b> · R² = ${nf2.format(R.r2)} · ${R.n_rutas} rutas. Se usa para valorar rutas nuevas (p. ej. desde la planta receptora hacia CEDIs que nunca atendió).`;
-  const vals=PL.flatMap(i=>CE.map(j=>INS.tarifa[i+"|"+j])), mn=Math.min(...vals), mx=Math.max(...vals);
+    const ci=sv("circle",{cx:X(p.km),cy:Y(p.cop_m3),r:Math.max(4,Math.min(10,2+Math.sqrt(p.m3_mes)/6)),fill:hist?"var(--s1)":"var(--s4)",stroke:"var(--surface)","stroke-width":2,"fill-opacity":.85}); s.append(ci);
+    bindTip(ci,()=>`<b>${INS.plantas[p.origen]?.nombre||p.origen} → ${INS.cedis[p.destino]?.nombre||p.destino}</b><br>${nf0.format(p.km)} km · $${nf0.format(p.cop_m3)}/m³ (terceros)<br>${nf0.format(p.viajes)} viajes de terceros${p.utilizacion?"<br>Ocupación vehículo (TMS): "+pct(p.utilizacion):""}`); });
+  c.innerHTML=""; c.append(s, el("div",{class:"legend"},`<span><span class="sw" style="background:var(--s1)"></span>Ruta con historia de terceros (≥ ${DATA.min_viajes} viajes)</span><span><span class="sw" style="background:var(--s4)"></span>Pocos viajes</span><span>– – regresión terceros</span><span style="color:var(--s2)">··· flota propia (costo por km actual)</span>`));
+  $("#regNote").innerHTML=`Regresión ponderada por volumen (terceros): <b>COP/m³ = ${nf0.format(R.intercepto)} + ${nf1.format(R.pendiente)} × km</b> · R² = ${nf2.format(R.r2)} · ${R.n_rutas} rutas. La línea punteada naranja es el costo por m³ de la flota propia con el costo por km y el factor de retorno del simulador.`;
+  const cc=cfg||cfgDe(ESC[0]);
+  const vals=PL.flatMap(i=>CE.map(j=>tarifaEf(cc,i,j))), mn=Math.min(...vals), mx=Math.max(...vals);
   const shade=v=>`color-mix(in srgb, var(--s1) ${Math.round(8+50*(v-mn)/((mx-mn)||1))}%, var(--surface))`;
-  const est=new Set(T.estimadas);
   $("#tblTar").innerHTML=`<tr><th>CEDI</th>${PL.map(i=>`<th class="n">${nomP(i)}</th>`).join("")}</tr>`+
-    CE.map(j=>`<tr><td>${INS.cedis[j].ciudad}</td>${PL.map(i=>{const v=INS.tarifa[i+"|"+j]; return `<td class="n" style="background:${shade(v)}" title="${nf0.format(INS.km[i+"|"+j])} km">${nf0.format(v)}${est.has(i+"|"+j)?"*":""}</td>`}).join("")}</tr>`).join("");
+    CE.map(j=>`<tr><td>${INS.cedis[j].ciudad}</td>${PL.map(i=>{const k=i+"|"+j, v=tarifaEf(cc,i,j); return `<td class="n" style="background:${shade(v)}" title="${nf0.format(INS.km[k])} km · flota propia ${pct(INS.share_propia[k])}">${nf0.format(v)}${INS.historia[k]?"":"*"}</td>`}).join("")}</tr>`).join("");
 }
 
+/* ======================= Orquestación ======================= */
 $("#metodo").innerHTML=DATA.metodologia;
-renderResumen(); renderCalidad();
-window.__SIM__={resolverRed,optimizarTraslados,cfgDesde,ESC};
-let rz; addEventListener("resize",()=>{clearTimeout(rz); rz=setTimeout(()=>{renderResumen(); if($("#p-tarifas").classList.contains("active")) renderTarifas(); if(simIniciado) recalc();},150)});
+function renderTodo(){
+  if(TAB==="resumen") renderResumen();
+  if(TAB==="sim"){ initSim(); recalc(); }
+  if(TAB==="comp"){ if(!simIni) initSim(); renderComp(); }
+  if(TAB==="calidad") renderCalidad();
+  if(TAB==="tarifas"){ if(!simIni) initSim(); renderTarifas(); }
+}
+setVista(VISTA);
+window.__SIM__={resolverRed,optimizarTraslados,cfgDe,ESC,BASECFG};
+let rz; addEventListener("resize",()=>{clearTimeout(rz); rz=setTimeout(renderTodo,150)});
 </script>
 </body>
 </html>

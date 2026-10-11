@@ -27,6 +27,7 @@ ARCHIVOS = {
     "capacidad": "capacidad_plantas.csv",         # capacidad por planta y familia (líneas)
     "param_plantas": "parametros_plantas.csv",    # costo fijo, factor de costo, máx. líneas
     "param_familias": "parametros_familias.csv",  # costo variable, CAPEX de traslado
+    "param_cedis": "parametros_cedis.csv",        # costos de manejo y almacenamiento por CEDI (opcional)
 }
 
 # ---------------------------------------------------------------------------
@@ -61,6 +62,7 @@ COLUMNAS_TMS = {
     "capacidad_kg": "Capacidad_Kg",
     "km": "Km_Recorridos",
     "costo_tms": "Costo_Viaje_COP",
+    "tipo_flota": "Tipo_Flota",            # PROPIA / TERCERO (opcional)
 }
 
 COLUMNAS_REFERENCIAS = {
@@ -113,7 +115,11 @@ COLUMNAS_INFO_CEDI = {
 COLUMNAS_HOMOLOGACION = {"codigo_sap": "Codigo_SAP", "id_nodo": "ID_Nodo"}
 COLUMNAS_CAPACIDAD = {"id_nodo": "ID_Nodo", "familia": "Familia", "capacidad_m3_mes": "Capacidad_M3_Mes"}
 COLUMNAS_PARAM_PLANTAS = {"id_nodo": "ID_Nodo", "costo_fijo_mes": "Costo_Fijo_COP_Mes",
-                          "factor_costo_var": "Factor_Costo_Variable", "max_lineas": "Max_Lineas_Recibir"}
+                          "factor_costo_var": "Factor_Costo_Variable", "max_lineas": "Max_Lineas_Recibir",
+                          "costo_posicion": "Costo_Posicion_COP_Mes", "dias_inventario": "Dias_Inventario_Planta"}
+COLUMNAS_PARAM_CEDIS = {"id_nodo": "ID_Nodo", "costo_manejo": "Costo_Manejo_COP_Estiba",
+                        "costo_posicion": "Costo_Posicion_COP_Mes", "costo_externo": "Costo_Posicion_Externa_COP_Mes",
+                        "dias_base": "Dias_Cobertura_Base"}
 COLUMNAS_PARAM_FAMILIAS = {"familia": "Familia", "costo_var_m3": "Costo_Var_Base_COP_M3",
                            "capex_traslado": "CAPEX_Traslado_Linea_COP", "pct_trasladable": "Pct_Capacidad_Trasladable"}
 
@@ -121,16 +127,22 @@ COLUMNAS_PARAM_FAMILIAS = {"familia": "Familia", "costo_var_m3": "Costo_Var_Base
 # 3. Reglas de calidad de datos
 # ---------------------------------------------------------------------------
 TIPO_MOV_TRASLADO = "XI"            # traslado planta/CEDI -> CEDI
-IMPORTE_MINIMO_VALIDO = 1.0         # importes <= 1 peso (0 o 1) se omiten del cálculo de tarifa
+IMPORTE_MINIMO_VALIDO = 1.0         # importes <= 1 peso (0 o 1): flota propia / sin liquidar -> se imputan
+IMPORTE_MIN_COP_M3 = 1_000          # importes simbólicos (p. ej. 10 pesos) por debajo de esto también se imputan
 FECHA_MIN, FECHA_MAX = "2020-01-01", "2030-12-31"
 OUTLIER_IQR_FACTOR = 3.0            # atípico de COP/m3 por ruta: fuera de Q1-k·IQR, Q3+k·IQR (en log)
 TOLERANCIA_VOLUMEN = (0.5, 2.0)     # Volumen SAP / (Cantidad × Volumen_Caja_m3) fuera de este rango = inconsistente
 MIN_VIAJES_TARIFA = 5               # mínimo de viajes válidos para usar la tarifa histórica de la ruta
 FACTOR_SINUOSIDAD_VIAL = 1.35       # km carretera ≈ km en línea recta × factor (topografía andina)
 LIMITES_COLOMBIA = dict(lat=(-4.3, 13.5), lon=(-82.0, -66.8))
-# Si es True, las líneas SAP con importe 0/1 toman el costo del TMS prorrateado por volumen
-# cuando el viaje cruza. Por defecto se omiten, como pide el negocio.
-COMPLETAR_IMPORTE_CON_TMS = False
+# Flete de viajes con IMPORTE SAP en 0 o 1 peso (flota propia: sí tienen costo).
+#   "mixto"     = costo de viajes similares (misma ruta) y, si no hay suficientes, costo por km
+#   "km"        = siempre costo por km × km del viaje
+METODO_IMPUTACION_FLETE = "mixto"
+MIN_VIAJES_SIMILARES = 3                # viajes de terceros en la misma ruta para usar "similares"
+COSTO_KM_FLOTA_PROPIA = 6_500           # COP/km; None = se deriva de los viajes de terceros
+FACTOR_RETORNO_FLOTA_PROPIA = 1.0       # 1,0 = solo ida; 1,6 = ida + retorno parcialmente vacío
+VOLUMEN_VIAJE_PROPIO_M3 = None          # m3 por viaje propio; None = promedio histórico
 
 # Tipos de nodo (se comparan sin tildes y en mayúsculas, por contenido)
 PALABRA_PLANTA = "PLANTA"
@@ -144,7 +156,15 @@ HORAS_EXTRA_MAX_PCT = 0.12           # capacidad adicional con horas extra / tur
 SOBRECOSTO_HORAS_EXTRA_PCT = 0.18    # sobrecosto sobre el costo variable
 COSTO_MAQUILA_PCT = 0.35             # maquila: sobrecosto sobre el costo variable base de la familia
 MAQUILA_MAX_M3_MES = 3000            # capacidad de maquila disponible en el mercado
-PENALIDAD_NO_ATENDIDA_COP_M3 = 900_000   # venta perdida por m3 no atendido
+PENALIDAD_NO_ATENDIDA_COP_M3 = 2_500_000 # venta perdida por m3 no atendido (margen + servicio)
 MESES_AMORTIZACION = 60
-DIAS_OPERACION_MES = 26              # para convertir capacidad diaria de recibo de CEDI a mensual
+DIAS_OPERACION_MES = 26
+# Almacenamiento (valores por defecto si no existe parametros_cedis.csv o faltan columnas)
+COSTO_MANEJO_COP_ESTIBA = 18_000        # recibo + despacho en CEDI
+COSTO_POSICION_CEDI_COP_MES = 45_000    # posición de estiba propia
+COSTO_POSICION_EXTERNA_COP_MES = 78_000 # desborde a bodega externa / 3PL
+DIAS_COBERTURA_BASE = 9                 # inventario en CEDI cuando la planta está al lado
+DIAS_COBERTURA_POR_1000KM = 4           # días extra de inventario por cada 1.000 km de distancia a la planta
+COSTO_POSICION_PLANTA_COP_MES = 30_000
+DIAS_INVENTARIO_PLANTA = 5              # para convertir capacidad diaria de recibo de CEDI a mensual
 SEMILLA = 42                         # datos de prueba reproducibles

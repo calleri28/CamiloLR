@@ -56,9 +56,9 @@ def definir_escenarios(ins):
             op.escenario("E3", f"Cierre {nom} + plan del maestro de referencias", "Cierre + plan referencias",
                          f"Traslado según Situacion_Post_Cambio / Planta_Produccion_Nueva: {plan}.", ins, traslado="plan"),
             op.escenario("E4", "E2 con demanda +10 %", "E2 · demanda +10 %",
-                         "Sensibilidad: crecimiento de demanda; se re-optimizan traslados.", ins, crec_demanda=0.10, sensibilidad=True),
+                         "Sensibilidad: crecimiento de demanda; se re-optimizan traslados.", ins, g=0.10, sensibilidad=True),
             op.escenario("E5", "E2 con flete +15 %", "E2 · flete +15 %",
-                         "Sensibilidad: alza de ACPM y peajes; se re-optimizan traslados.", ins, indice_flete=1.15, sensibilidad=True),
+                         "Sensibilidad: alza de ACPM y peajes; se re-optimizan traslados.", ins, ff=1.15, sensibilidad=True),
         ]
     return esc
 
@@ -67,10 +67,16 @@ def hallazgos(bit, match, resumen, reg, tarifas, historico, ins):
     b = bit.set_index("regla")
     get = lambda r, c="registros": b[c].get(r, 0)
     h = []
-    h.append(f"<b>{_es(get('S18'))} líneas XI con IMPORTE SAP en 0, 1 peso o vacío</b> ({_es(get('S18', 'volumen_m3'))} m³). "
-             "Se excluyen del cálculo de tarifa para no subestimar el COP/m³, pero su volumen sí cuenta como demanda: el producto se movió.")
-    h.append(f"{_es(get('S19'))} líneas con COP/m³ atípico dentro de su ruta (dígito de más, viajes casi vacíos): "
-             f"{_es(get('S19', 'importe') / 1e6)} M COP que habrían distorsionado la tarifa.")
+    fi = historico["flete_imputado"]
+    h.append(f"<b>{_es(get('S18'))} líneas XI con IMPORTE SAP en 0, 1 peso, vacío o simbólico</b> ({_es(get('S18', 'volumen_m3'))} m³): "
+             "son viajes de flota propia o sin liquidar y sí tienen costo. "
+             f"Se imputó el flete a {_es(fi['lineas_similares'])} líneas con viajes similares de terceros (misma ruta y vehículo) "
+             f"y a {_es(fi['lineas_km'])} por costo por km ({_es(fi['cop_km'])} COP/km × km × {_es(fi['factor_retorno'], 1)}), "
+             "sobre todo en rutas que solo hace la flota propia.")
+    h.append(f"Sin la imputación el flete histórico sería {_es(historico['flete_sap_sin_imputar_mes'] / 1e6)} M COP/mes en lugar de "
+             f"{_es(historico['flete_mes'] / 1e6)} M: se subestimaría en {_es((1 - historico['flete_sap_sin_imputar_mes'] / historico['flete_mes']) * 100)} %.")
+    h.append(f"{_es(get('S19'))} líneas con COP/m³ atípico dentro de su ruta (dígito de más, viajes casi vacíos), por "
+             f"{_es(get('S19', 'importe') / 1e6)} M COP, se re-imputaron para no distorsionar la tarifa.")
     h.append(f"Volumen: {_es(get('S14'))} líneas vacías y {_es(get('S15'))} inconsistentes con Cantidad × Volumen_Caja_m3 "
              "(p. ej. en litros) se corrigieron con el maestro de referencias. Esto confirma que <i>Cantidad</i> está en cajas.")
     if match["hay_tms"]:
@@ -105,10 +111,16 @@ traslado; el maestro de nodos aporta coordenadas, tipo de nodo y la planta que c
 <h3>2. Parámetros estimados</h3>
 <p><b>Demanda</b> (m³/mes): entradas XI a cada CEDI menos salidas XI a otros CEDI, promedio de {ins['meses_historia']} meses.
 En los escenarios de cierre se descuenta el volumen de referencias descontinuadas sin sustituta.
-<b>Tarifa</b> (COP/m³): histórico de la ruta si tiene ≥ {P.MIN_VIAJES_TARIFA} viajes válidos; si no, regresión ponderada COP/m³ = a + b·km.</p>
+<b>Tarifa de terceros</b> (COP/m³): histórico de la ruta si tiene ≥ {P.MIN_VIAJES_TARIFA} viajes liquidados; si no, regresión ponderada COP/m³ = a + b·km.
+<b>Flota propia</b>: los viajes con IMPORTE SAP en 0 o 1 peso se valoran con viajes similares (misma ruta y vehículo, ≥ {P.MIN_VIAJES_SIMILARES} viajes de terceros)
+o, si no hay, con costo por km × km × factor de retorno ÷ m³ por viaje. La tarifa efectiva de cada ruta mezcla tercero y flota propia según su participación histórica.</p>
+<p><b>Almacenamiento</b>: manejo en CEDI (COP/estiba de recibo + despacho); inventario en CEDI = m³ recibidos × días de cobertura ÷ 30 ÷ m³ por estiba × costo de posición,
+donde los días de cobertura = días base + {P.DIAS_COBERTURA_POR_1000KM} días por cada 1.000 km a la planta que abastece (más lejos, más stock de seguridad);
+el inventario que excede las posiciones de Info_CEDI × ocupación máxima operable se cobra a tarifa de bodega externa; inventario en planta = días de inventario × costo de posición.
+La vista «Agrupado» suma transporte y almacenamiento como Logística; las otras vistas los separan.</p>
 <h3>3. Modelo MILP (Python · PuLP)</h3>
-<p>Minimiza el costo mensual: producción variable + flete primario + horas extra + maquila + penalidad por demanda no atendida
-+ costo fijo de plantas abiertas + CAPEX de traslado de líneas amortizado a {P.MESES_AMORTIZACION} meses. Restricciones: demanda por CEDI y familia,
+<p>Minimiza el costo mensual: producción variable + horas extra + flete primario + manejo e inventario en CEDI + inventario en planta
++ maquila + penalidad por demanda no atendida + costo fijo de plantas abiertas + CAPEX de traslado de líneas amortizado a {P.MESES_AMORTIZACION} meses. Restricciones: demanda por CEDI y familia,
 capacidad por planta y familia (líneas) más la capacidad que aporta una línea trasladada ({'; '.join(f'{f.title()} {_es(v)} m³' for f, v in ins['cap_traslado'].items() if v)}),
 horas extra ≤ {P.HORAS_EXTRA_MAX_PCT:.0%}, cada línea se traslada a una sola planta, máximo de líneas a recibir por planta
 y maquila ≤ {_es(P.MAQUILA_MAX_M3_MES)} m³/mes.</p>
@@ -119,6 +131,8 @@ Los resultados del simulador coinciden con los de Python para los mismos supuest
 <h3>5. Limitaciones</h3>
 <ul><li>La demanda es un promedio mensual: para picos estacionales, use el control de crecimiento de demanda.</li>
 <li>La capacidad de recibo del CEDI se reporta como alerta; no restringe porque toda la demanda del CEDI debe llegar a él.</li>
+<li>El desborde a bodega externa se calcula sobre la solución óptima (no cambia la asignación); el costo por días de cobertura sí entra a la optimización.</li>
+<li>El costo por km de la flota propia no incluye costos fijos por viaje (cargue, esperas); ajústelo con el control del simulador.</li>
 <li>El flete secundario CEDI → cliente no cambia con el cierre y no se modela.</li>
 <li>Costos de cierre (liquidaciones, desmantelamiento) e ingresos por venta de activos se suman aparte al caso de negocio.</li></ul>
 """
@@ -155,6 +169,9 @@ def main(argv=None):
     sap, resumen = cd.limpiar_sap(e["sap"], refs, homolog, nodos, clientes, bit)
     tms = cd.limpiar_tms(e["tms"])
     sap, match = cd.cruzar_sap_tms(sap, tms, nodos, bit)
+    sap, info_flete = cd.imputar_flete(sap, bit)
+    print(f"   Flete imputado (flota propia / 0-1 peso / atípicos): {_es(info_flete['lineas_similares'])} líneas por viajes similares, "
+          f"{_es(info_flete['lineas_km'])} por costo por km ({_es(info_flete['cop_km'])} COP/km)")
     bitacora = bit.tabla()
     print(f"   SAP: {_es(resumen['registros_iniciales'])} registros → {_es(resumen['registros_xi_limpios'])} traslados XI depurados "
           f"({_es(resumen['registros_validos_tarifa'])} válidos para tarifa) · match TMS {match['tasa_match']:.0%}")
@@ -166,19 +183,24 @@ def main(argv=None):
     tarifas, por_ruta, reg = op.estimar_tarifas(sap, plantas, cedis, nodos)
     cierre_tmp = P.PLANTA_CIERRE or next((i for i in plantas if pd.notna(nodos.at[i, "fecha_cierre"])), None)
     plan, plan_det = op.plan_desde_referencias(sap, refs, cierre_tmp) if cierre_tmp else ({}, pd.DataFrame())
-    ins = op.construir_insumos(e, nodos, refs, demanda, tarifas, plan, info_cedi, n_meses)
+    ins = op.construir_insumos(e, nodos, refs, demanda, tarifas, plan, info_cedi, n_meses, info_flete, reg)
     if not ins["planta_cierre"]:
         print("   ⚠ No se identificó planta en cierre (Fecha_Cierre vacía en el maestro de nodos y PLANTA_CIERRE = None). Solo se corre E0.")
     else:
         print(f"   Planta que cierra: {ins['planta_cierre']} ({ins['plantas'][ins['planta_cierre']]['nombre']})")
 
     meses = sap["periodo"].dt.to_period("M").nunique()
-    v = sap[sap["valido_tarifa"]]
-    cop_m3 = v["importe"].sum() / v["volumen"].sum()
     cedis_set = set(nodos.index[nodos["clase"] == "CEDI"])
-    historico = dict(meses=int(meses), flete_mes=float(cop_m3 * sap["volumen"].sum() / meses),
+    v = sap[sap["fuente_flete"] == "SAP tercero"]
+    por_fuente = sap.groupby("fuente_flete").agg(lineas=("importe", "size"), m3=("volumen", "sum"), importe=("importe", "sum"))
+    historico = dict(meses=int(meses), flete_mes=float(sap["importe"].sum() / meses),
+                     flete_sap_sin_imputar_mes=float(v["importe"].sum() / meses),
                      m3_mes=float(sap["volumen"].sum() / meses),
-                     pct_reexpedicion=float(v.loc[v["origen"].isin(cedis_set), "importe"].sum() / v["importe"].sum()))
+                     pct_volumen_propia=float(sap.loc[sap["es_propia"], "volumen"].sum() / sap["volumen"].sum()),
+                     por_fuente={k: dict(lineas=int(r.lineas), m3_mes=float(r.m3 / meses), importe_mes=float(r.importe / meses))
+                                 for k, r in por_fuente.iterrows()},
+                     flete_imputado=info_flete,
+                     pct_reexpedicion=float(sap.loc[sap["origen"].isin(cedis_set), "importe"].sum() / sap["importe"].sum()))
 
     print("» Optimizando escenarios (MILP) …")
     escenarios = []
@@ -187,10 +209,7 @@ def main(argv=None):
         tr = ", ".join(f"{f.title()}→" + "/".join(d) for f, d in r["traslados"].items()) or "—"
         print(f"   {esc['id']} {esc['nombre']:<52} {r['estado']:<8} {r['costos']['total'] / 1e6:>10,.0f} M COP/mes · traslados: {tr}")
         escenarios.append(dict(id=esc["id"], nombre=esc["nombre"], nombre_corto=esc["nombre_corto"], descripcion=esc["descripcion"],
-                               sensibilidad=esc["sensibilidad"], **r,
-                               config=dict(abiertas=esc["abiertas"], cap_pct=esc["cap_pct"], crec_demanda=esc["crec_demanda"],
-                                           indice_flete=esc["indice_flete"], indice_produccion=esc["indice_produccion"],
-                                           aplicar_desc=esc["aplicar_desc"])))
+                               sensibilidad=esc["sensibilidad"], **r, config={**esc["cfg"], "traslados": r["traslados"]}))
 
     # ---------------- Salidas tabulares ---------------------------------
     res = pd.DataFrame([dict(escenario=x["id"], nombre=x["nombre"], estado=x["estado"],
@@ -223,7 +242,8 @@ def main(argv=None):
                      rutas=[dict(origen=r.origen, destino=r.destino, km=float(r.km), cop_m3=float(r.cop_m3), viajes=int(r.viajes),
                                  m3_mes=float(r.m3_mes), utilizacion=None if pd.isna(r.utilizacion) else float(r.utilizacion))
                             for r in rutas.itertuples()]),
-        plan_detalle=plan_det.to_dict("records"), metodologia=metodologia(ins))
+        plan_detalle=plan_det.to_dict("records"), metodologia=metodologia(ins),
+        cfg_base=op.cfg_base(ins), grupos=op.GRUPOS)
     html = (AQUI / "plantilla_reporte.html").read_text(encoding="utf-8")
     js = json.dumps(datos, ensure_ascii=False, default=lambda o: None if pd.isna(o) else float(o)).replace("</", "<\\/")
     destino = out / "reporte_optimizacion.html"

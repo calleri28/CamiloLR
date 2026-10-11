@@ -1,5 +1,5 @@
-﻿ID_Nodo;Costo_Fijo_COP_Mes;Factor_Costo_Variable;Max_Lineas_Recibir
-PL01;2400000000;1,00;2
-PL02;1900000000;0,97;2
-PL03;1600000000;1,03;2
-PL04;1300000000;1,01;2
+﻿ID_Nodo;Costo_Fijo_COP_Mes;Factor_Costo_Variable;Max_Lineas_Recibir;Costo_Posicion_COP_Mes;Dias_Inventario_Planta
+PL01;2400000000;1,00;2;30000;5
+PL02;1900000000;0,97;2;30000;5
+PL03;1600000000;1,03;2;30000;5
+PL04;1300000000;1,01;2;30000;5

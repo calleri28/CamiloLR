@@ -383,9 +383,9 @@ def limpiar_sap(raw, refs, homolog, nodos, clientes, bit: Bitacora):
     # --- Flete -----------------------------------------------------------
     df["valido_tarifa"] = True
     df["motivo_exclusion_tarifa"] = ""
-    m = df["importe"].isna() | (df["importe"] <= P.IMPORTE_MINIMO_VALIDO)
-    bit.registrar("SAP", "S18", "IMPORTE SAP en 0, 1 peso o vacío",
-                  "Excluido del cálculo de tarifa (el volumen sí cuenta para demanda)", m, df)
+    m = df["importe"].isna() | (df["importe"] <= P.IMPORTE_MINIMO_VALIDO) | (df["importe"] / df["volumen"] < P.IMPORTE_MIN_COP_M3)
+    bit.registrar("SAP", "S18", f"IMPORTE SAP en 0, 1 peso, vacío o simbólico (< {P.IMPORTE_MIN_COP_M3:,.0f} COP/m³): flota propia o viaje sin liquidar".replace(",", "."),
+                  "Se imputa el flete (ver S22/S23); no entra a la tarifa de terceros", m, df)
     df.loc[m, ["valido_tarifa", "motivo_exclusion_tarifa"]] = [False, "importe<=1"]
 
     df["cop_m3"] = df["importe"] / df["volumen"]
@@ -398,7 +398,7 @@ def limpiar_sap(raw, refs, homolog, nodos, clientes, bit: Bitacora):
     iqr = lim["q3"] - lim["q1"]
     k = P.OUTLIER_IQR_FACTOR
     m = ok & ((df["log_cop"] < lim["q1"] - k * iqr) | (df["log_cop"] > lim["q3"] + k * iqr))
-    bit.registrar("SAP", "S19", "COP/m3 atípico dentro de la ruta (dígito de más, viaje casi vacío)", "Excluido del cálculo de tarifa", m, df)
+    bit.registrar("SAP", "S19", "COP/m3 atípico dentro de la ruta (dígito de más, viaje casi vacío)", "Se re-imputa con viajes similares o costo por km", m, df)
     df.loc[m, ["valido_tarifa", "motivo_exclusion_tarifa"]] = [False, "atipico"]
 
     m = df["viaje_n"].isna()
@@ -436,6 +436,7 @@ def limpiar_tms(raw):
     for c in ["km", "capacidad_m3", "capacidad_kg", "costo_tms"]:
         t[c] = t[c].map(numero_flexible)
     t["tipo_vehiculo"] = norm_texto(t["tipo_vehiculo"])
+    t["tipo_flota"] = norm_texto(t["tipo_flota"])
     t["km_invalido"] = t["km"].isna() | (t["km"] <= 0)
     t.loc[t["km_invalido"], "km"] = np.nan
     return t.dropna(subset=["viaje_n"]).drop_duplicates("viaje_n")
@@ -445,11 +446,11 @@ def cruzar_sap_tms(sap, tms, nodos, bit: Bitacora):
     """SAP manda; el TMS complementa km, vehículo y capacidad cuando el viaje cruza."""
     df = sap.copy()
     if tms is not None:
-        cols = ["viaje_n", "tipo_vehiculo", "capacidad_m3", "km", "costo_tms", "km_invalido"]
+        cols = ["viaje_n", "tipo_vehiculo", "capacidad_m3", "km", "costo_tms", "km_invalido", "tipo_flota"]
         df = df.merge(tms[cols], on="viaje_n", how="left")
         df["match_tms"] = df["tipo_vehiculo"].notna() & df["viaje_n"].notna()
     else:
-        for c in ["tipo_vehiculo", "capacidad_m3", "km", "costo_tms"]:
+        for c in ["tipo_vehiculo", "capacidad_m3", "km", "costo_tms", "tipo_flota"]:
             df[c] = np.nan
         df["km_invalido"], df["match_tms"] = False, False
     df["km_teorico"] = [km_vial(nodos.at[o, "lat"], nodos.at[o, "lon"], nodos.at[d, "lat"], nodos.at[d, "lon"])
@@ -465,12 +466,6 @@ def cruzar_sap_tms(sap, tms, nodos, bit: Bitacora):
     vol_viaje = df.groupby("viaje_n")["volumen"].transform("sum")
     df["utilizacion"] = np.where(df["match_tms"], vol_viaje / df["capacidad_m3"], np.nan)
     df["km_usado"] = df["km"].fillna(df["km_teorico"])
-    if P.COMPLETAR_IMPORTE_CON_TMS:
-        m = ~df["valido_tarifa"] & (df["motivo_exclusion_tarifa"] == "importe<=1") & df["match_tms"] & df["costo_tms"].notna()
-        df.loc[m, "importe"] = df.loc[m, "costo_tms"] * df.loc[m, "volumen"] / vol_viaje[m]
-        df.loc[m, ["valido_tarifa", "motivo_exclusion_tarifa"]] = [True, "completado_tms"]
-        bit.registrar("TMS", "T04", "Importe 0/1 completado con costo TMS prorrateado por volumen", "Corregido", m, df)
-
     v_sap = df["viaje_n"].dropna().unique()
     match = dict(viajes_sap=int(len(v_sap)), viajes_con_match=int(df.loc[df["match_tms"], "viaje_n"].nunique()),
                  lineas_sin_viaje=int(df["viaje_n"].isna().sum()),
@@ -478,3 +473,62 @@ def cruzar_sap_tms(sap, tms, nodos, bit: Bitacora):
                  hay_tms=tms is not None)
     match["tasa_match"] = match["viajes_con_match"] / max(1, match["viajes_sap"])
     return df, match
+
+
+# ---------------------------------------------------------------------------
+# Imputación de flete (flota propia / importes 0-1 / atípicos)
+# ---------------------------------------------------------------------------
+def imputar_flete(df, bit: Bitacora, metodo=None):
+    """Los viajes con IMPORTE SAP en 0/1 (flota propia) o atípico sí tienen costo: se imputa.
+    1) Viajes similares: mediana COP/m3 de viajes de terceros en la misma ruta (y mismo vehículo si se conoce).
+    2) Costo por km: COP/km × km del viaje × factor de retorno, prorrateado por volumen dentro del viaje."""
+    metodo = metodo or P.METODO_IMPUTACION_FLETE
+    df = df.copy()
+    df["importe_sap"] = df["importe"]
+    objetivo = ~df["valido_tarifa"]
+    base = df[df["valido_tarifa"]]
+
+    # Costo por km de referencia
+    viajes_t = base.dropna(subset=["viaje_n"]).groupby("viaje_n").agg(imp=("importe", "sum"), km=("km_usado", "first"))
+    cop_km_derivado = float((viajes_t["imp"] / viajes_t["km"])[viajes_t["km"] > 150].median()) if len(viajes_t) else np.nan
+    cop_km = float(P.COSTO_KM_FLOTA_PROPIA) if P.COSTO_KM_FLOTA_PROPIA else cop_km_derivado
+    fr = P.FACTOR_RETORNO_FLOTA_PROPIA
+
+    # Volumen promedio de un viaje propio
+    vol_viaje = df.groupby("viaje_n")["volumen"].transform("sum")
+    todo_obj = objetivo.groupby(df["viaje_n"]).transform("all")
+    viajes_obj = df[objetivo & todo_obj & df["viaje_n"].notna()].groupby("viaje_n")["volumen"].sum()
+    vol_propio = float(P.VOLUMEN_VIAJE_PROPIO_M3 or (viajes_obj.mean() if len(viajes_obj) else 80.0))
+
+    # 1) Similares: (ruta, vehículo) y luego ruta
+    def mediana(cols):
+        g = base.groupby(cols).agg(cop=("cop_m3", "median"), n=("viaje_n", "nunique"))
+        return g[g["n"] >= P.MIN_VIAJES_SIMILARES]["cop"]
+    por_rv = mediana(["ruta", "tipo_vehiculo"])
+    por_r = mediana(["ruta"])
+    cop_sim = pd.Series([por_rv.get((r, v), np.nan) for r, v in zip(df["ruta"], df["tipo_vehiculo"])], index=df.index)
+    cop_sim = cop_sim.fillna(df["ruta"].map(por_r))
+    imp_sim = cop_sim * df["volumen"]
+
+    # 2) Costo por km
+    frac = np.where(df["viaje_n"].notna() & (vol_viaje > 0), df["volumen"] / vol_viaje, df["volumen"] / vol_propio)
+    imp_km = cop_km * df["km_usado"] * fr * frac
+
+    if metodo == "km":
+        usa_sim = pd.Series(False, index=df.index)
+    else:
+        usa_sim = imp_sim.notna()
+    m_sim = objetivo & usa_sim
+    m_km = objetivo & ~usa_sim
+    df.loc[m_sim, "importe"] = imp_sim[m_sim]
+    df.loc[m_km, "importe"] = imp_km[m_km]
+    df["fuente_flete"] = np.where(~objetivo, "SAP tercero", np.where(m_sim, "Imputado viajes similares", "Imputado costo por km"))
+    df["es_propia"] = objetivo & (df["motivo_exclusion_tarifa"] == "importe<=1")
+    bit.registrar("SAP", "S22", f"Flete imputado con viajes similares (misma ruta/vehículo, ≥ {P.MIN_VIAJES_SIMILARES} viajes de terceros)",
+                  "Corregido: mediana COP/m³ de la ruta × volumen", m_sim, df)
+    bit.registrar("SAP", "S23", f"Flete imputado por costo por km ({cop_km:,.0f} COP/km × km × {fr})".replace(",", "."),
+                  "Corregido: costo por km prorrateado por volumen del viaje", m_km, df)
+    info = dict(metodo=metodo, cop_km=cop_km, cop_km_derivado=cop_km_derivado, factor_retorno=fr, vol_viaje_propio=vol_propio,
+                lineas_similares=int(m_sim.sum()), lineas_km=int(m_km.sum()),
+                importe_imputado=float(df.loc[objetivo, "importe"].sum()))
+    return df, info
