@@ -1,0 +1,23 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Ejecutar modelo de red",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}/ejecutar_modelo.py",
+      "cwd": "${workspaceFolder}",
+      "console": "integratedTerminal",
+      "justMyCode": true
+    },
+    {
+      "name": "Ejecutar modelo (sin sensibilidad, más rápido)",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}/ejecutar_modelo.py",
+      "args": ["--sin-sensibilidad"],
+      "cwd": "${workspaceFolder}",
+      "console": "integratedTerminal"
+    }
+  ]
+}

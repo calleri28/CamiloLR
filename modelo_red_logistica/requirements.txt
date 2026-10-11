@@ -1,0 +1,7 @@
+# Probado con Python 3.11 - 3.13
+pandas>=2.2
+numpy>=1.26
+scipy>=1.11          # incluye el solver HiGHS (scipy.optimize.milp) -> no requiere instalar solvers
+xlsxwriter>=3.1
+plotly>=5.18         # se embebe en el HTML para que funcione sin internet
+pyyaml>=6.0

@@ -1,0 +1,8 @@
+# Datos fuente (pesados / confidenciales): se copian localmente en datos/
+datos/*
+!datos/LEEME.md
+# Resultados generados
+salidas/
+.venv/
+__pycache__/
+*.pyc

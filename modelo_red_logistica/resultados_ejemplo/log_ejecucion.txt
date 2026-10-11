@@ -1,0 +1,69 @@
+04:19:22 | INFO | === 1/6 Carga de datos desde /tmp/claude-0/-home-user-CamiloLR/f48bfb45-590e-5b48-a757-7b5ee64097de/scratchpad/datos_raw/Datos
+04:19:23 | INFO | Leído SAP.csv                desde caché (1,920,259 filas)
+04:19:23 | INFO | Leído TMS.csv                desde caché (184,670 filas)
+04:19:23 | INFO | Leído capacidad_plantas.csv  5 filas x 3 columnas
+04:19:23 | INFO | Leído homologacion_centros.csv 10 filas x 2 columnas
+04:19:23 | INFO | Leído info_cedi.csv          10 filas x 31 columnas
+04:19:23 | INFO | Leído maestro_clientes.csv   892 filas x 13 columnas
+04:19:23 | INFO | Leído maestro_nodos.csv      10 filas x 13 columnas
+04:19:23 | INFO | Leído maestro_referencias.csv 1,817 filas x 24 columnas
+04:19:23 | INFO | Leído parametros_plantas.csv 10 filas x 4 columnas
+04:19:23 | INFO | === 2/6 Limpieza, homologación y parámetros
+04:19:33 | INFO | SAP: 1,920,055 líneas, 1,031,819 con flete válido (> 1 COP)
+04:19:36 | INFO | Homologación plantas maestro->SAP: {'CO05': 'CO01', 'CO06': 'CO01', 'CO10': 'CO10', 'CO12': 'CO02', 'CO14': 'CO14', 'CO30': 'CO04', 'CO45': 'CO04', 'CO46': 'CO02', 'CO48': 'CO01', 'CO50': 'CO02', 'CO60': 'CO03'}
+04:19:40 | INFO | Match SAP-TMS por viaje: 75,354 de 78,336 (96.2 %)
+04:19:46 | INFO | Regresión tarifa distribución: 28995 + 66.0*km (R2=0.50, n=426)
+04:19:46 | INFO | Regresión tarifa traslado:     9195 + 100.9*km (R2=0.91, n=39)
+04:19:49 | INFO | m3 por posición de estiba (ponderado por volumen): 2.26
+04:19:49 | INFO | Días de inventario: 24.7 (implícito AS-IS en CO01 = 24.7)
+04:19:52 | INFO | === 3/6 Validaciones de calidad de datos
+04:19:57 | INFO |     52 validaciones (5 severidad alta)
+04:19:57 | INFO | === 4/6 Optimización de escenarios
+04:19:57 | INFO | Optimizando 5 escenarios...
+04:19:57 | INFO |   E0_ASIS_OPT        Optimal    z=14,116 MCOP  (9120 vars, 975 restr, 0.2s)
+04:19:58 | INFO |   E1_TRASLADO_CEDI   Optimal    z=12,875 MCOP  (5992 vars, 791 restr, 0.0s)
+04:19:58 | INFO |   E2_BODEGA_EXTERNA  Optimal    z=13,436 MCOP  (8239 vars, 844 restr, 0.2s)
+04:19:58 | INFO |   E3_OPTIMO          Optimal    z=12,875 MCOP  (8239 vars, 809 restr, 0.1s)
+04:19:59 | INFO |   E4_OPTIMO_FLEX     Optimal    z=11,756 MCOP  (10916 vars, 1087 restr, 0.2s)
+04:19:59 | INFO | Sensibilidad: 30 corridas
+04:19:59 | INFO |   E1_TRASLADO_CEDI   Optimal    z=12,572 MCOP  (5992 vars, 791 restr, 0.0s)
+04:19:59 | INFO |   E2_BODEGA_EXTERNA  Optimal    z=13,141 MCOP  (8239 vars, 844 restr, 0.1s)
+04:19:59 | INFO |   E3_OPTIMO          Optimal    z=12,572 MCOP  (8239 vars, 809 restr, 0.0s)
+04:19:59 | INFO |   E1_TRASLADO_CEDI   Optimal    z=12,647 MCOP  (5992 vars, 791 restr, 0.0s)
+04:19:59 | INFO |   E2_BODEGA_EXTERNA  Optimal    z=13,189 MCOP  (8239 vars, 844 restr, 0.1s)
+04:20:00 | INFO |   E3_OPTIMO          Optimal    z=12,647 MCOP  (8239 vars, 809 restr, 0.1s)
+04:20:00 | INFO |   E1_TRASLADO_CEDI   Optimal    z=12,760 MCOP  (5992 vars, 791 restr, 0.0s)
+04:20:00 | INFO |   E2_BODEGA_EXTERNA  Optimal    z=13,302 MCOP  (8239 vars, 844 restr, 0.1s)
+04:20:00 | INFO |   E3_OPTIMO          Optimal    z=12,760 MCOP  (8239 vars, 809 restr, 0.1s)
+04:20:01 | INFO |   E1_TRASLADO_CEDI   Optimal    z=12,892 MCOP  (5992 vars, 791 restr, 0.0s)
+04:20:01 | INFO |   E2_BODEGA_EXTERNA  Optimal    z=13,451 MCOP  (8239 vars, 844 restr, 0.1s)
+04:20:01 | INFO |   E3_OPTIMO          Optimal    z=12,892 MCOP  (8239 vars, 809 restr, 0.1s)
+04:20:01 | INFO |   E1_TRASLADO_CEDI   Optimal    z=13,137 MCOP  (5992 vars, 791 restr, 0.0s)
+04:20:02 | INFO |   E2_BODEGA_EXTERNA  Optimal    z=13,690 MCOP  (8239 vars, 844 restr, 0.1s)
+04:20:02 | INFO |   E3_OPTIMO          Optimal    z=13,137 MCOP  (8239 vars, 809 restr, 0.1s)
+04:20:02 | INFO |   E1_TRASLADO_CEDI   Optimal    z=13,408 MCOP  (5992 vars, 791 restr, 0.0s)
+04:20:03 | INFO |   E2_BODEGA_EXTERNA  Optimal    z=13,903 MCOP  (8239 vars, 844 restr, 0.4s)
+04:20:03 | INFO |   E3_OPTIMO          Optimal    z=13,408 MCOP  (8239 vars, 809 restr, 0.1s)
+04:20:03 | INFO |   E1_TRASLADO_CEDI   Optimal    z=12,233 MCOP  (5992 vars, 791 restr, 0.0s)
+04:20:03 | INFO |   E2_BODEGA_EXTERNA  Optimal    z=12,792 MCOP  (8239 vars, 844 restr, 0.1s)
+04:20:04 | INFO |   E3_OPTIMO          Optimal    z=12,233 MCOP  (8239 vars, 809 restr, 0.1s)
+04:20:04 | INFO |   E1_TRASLADO_CEDI   Optimal    z=12,875 MCOP  (5992 vars, 791 restr, 0.0s)
+04:20:04 | INFO |   E2_BODEGA_EXTERNA  Optimal    z=13,436 MCOP  (8239 vars, 844 restr, 0.1s)
+04:20:04 | INFO |   E3_OPTIMO          Optimal    z=12,875 MCOP  (8239 vars, 809 restr, 0.1s)
+04:20:04 | INFO |   E1_TRASLADO_CEDI   Optimal    z=13,518 MCOP  (5992 vars, 791 restr, 0.0s)
+04:20:05 | INFO |   E2_BODEGA_EXTERNA  Optimal    z=14,080 MCOP  (8239 vars, 844 restr, 0.2s)
+04:20:05 | INFO |   E3_OPTIMO          Optimal    z=13,518 MCOP  (8239 vars, 809 restr, 0.1s)
+04:20:05 | INFO |   E1_TRASLADO_CEDI   Optimal    z=14,161 MCOP  (5992 vars, 791 restr, 0.0s)
+04:20:05 | INFO |   E2_BODEGA_EXTERNA  Optimal    z=14,724 MCOP  (8239 vars, 844 restr, 0.1s)
+04:20:06 | INFO |   E3_OPTIMO          Optimal    z=14,161 MCOP  (8239 vars, 809 restr, 0.1s)
+04:20:06 | INFO |   > Con 24,7 días de inventario, la alternativa de menor costo es traslado a CEDI de otra ciudad (Opción B): 12.875 MCOP/mes frente a 13.436 MCOP/mes de bodega externa (Opción A); diferencia 560 MCOP/mes (6.723 MCOP/año).
+04:20:06 | INFO |   > Aun con costo fijo cero, la bodega externa quedaría 18 MCOP/mes por encima del traslado: limitar los traslados y manejar el producto en un nodo adicional cuesta más que llevarlo a un CEDI con espacio.
+04:20:06 | INFO |   > El óptimo libre no usa bodegas externas: absorbe el volumen con el CEDI de la planta y CEDIs con capacidad libre, cerrando la bodega externa actual. Costo 12.875 MCOP/mes.
+04:20:06 | INFO |   > Frente a la red AS-IS optimizada con CO10 operando (14.116 MCOP/mes), el TO-BE ahorra 1.240 MCOP/mes, incluyendo el costo fijo de CO10 que desaparece.
+04:20:06 | INFO |   > Reasignar producción entre plantas con familias compatibles ahorraría 1.120 MCOP/mes adicionales (validar capacidades: capacidad_plantas muestra filas idénticas para CO02 y CO04).
+04:20:06 | INFO |   > Sensibilidad: en todo el rango evaluado (10-35 días) el traslado a CEDI sigue siendo más económico que la bodega externa.
+04:20:06 | INFO | === 5/6 Excel
+04:20:07 | INFO |     /tmp/claude-0/-home-user-CamiloLR/f48bfb45-590e-5b48-a757-7b5ee64097de/scratchpad/salidas/resultados_red_logistica.xlsx
+04:20:07 | INFO | === 6/6 HTML
+04:20:07 | INFO |     /tmp/claude-0/-home-user-CamiloLR/f48bfb45-590e-5b48-a757-7b5ee64097de/scratchpad/salidas/reporte_red_logistica.html
+04:20:07 | INFO | Listo en 45 s

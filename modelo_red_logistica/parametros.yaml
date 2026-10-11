@@ -1,0 +1,153 @@
+# =============================================================================
+#  PARÁMETROS DEL MODELO DE OPTIMIZACIÓN DE RED LOGÍSTICA
+#  Edite este archivo y vuelva a ejecutar:  python ejecutar_modelo.py
+#  Unidades: volumen en m3, costos en COP, horizonte = 1 mes promedio.
+#  Los valores marcados [SUPUESTO] no vienen en los datos: valídelos con su equipo.
+# =============================================================================
+
+rutas:
+  datos: datos                # carpeta con los CSV (SAP.csv, TMS.csv, maestros...)
+  salidas: salidas            # carpeta donde se escriben HTML, Excel y logs
+  usar_cache: true            # guarda SAP/TMS leídos en salidas/cache para acelerar corridas
+
+# ----------------------------------------------------------------------------
+# Limpieza y reglas de negocio sobre los datos
+# ----------------------------------------------------------------------------
+limpieza:
+  tipos_traslado: [XI]        # Tipo SAP que representa traslado planta/CEDI -> CEDI
+  umbral_importe_invalido: 1  # importes <= a este valor (0, 0,9, 1 peso) se omiten del cálculo de fletes
+  eliminar_duplicados_exactos: true
+  percentil_outlier_tarifa: [1, 99]   # líneas con COP/m3 fuera de estos percentiles se excluyen de las tarifas
+  volumen_minimo_lane_m3: 20  # volumen mínimo (en el periodo base) para confiar en la tarifa observada de una ruta
+  factor_ruta_km: 1.30        # km por carretera = km línea recta x factor (topografía colombiana)
+
+periodo_base:                 # meses completos ANTES del cierre para construir demanda y tarifas
+  desde: "2025-07"
+  hasta: "2026-06"
+
+# ----------------------------------------------------------------------------
+# Homologaciones que no vienen en los datos (inferidas y verificadas en el análisis)
+# ----------------------------------------------------------------------------
+homologacion:
+  # Clientes SAP que en los movimientos XI representan un nodo destino.
+  # Los que no están aquí se homologan automáticamente por ciudad del nodo.
+  clientes_nodo:
+    C717: CO14   # YUMBO -> CEDI Cali
+    C720: CO99   # TOCANCIPA -> bodega externa 3PL
+    C723: CO29   # Zona Industrial El Papayo (Ibagué)
+    C727: CO03   # Guachené -> planta Caloto
+    C729: CO03
+  # Ciudades (TMS / SAP) que corresponden a un nodo, adicional a la ciudad del maestro de nodos
+  ciudades_nodo:
+    YUMBO: CO14
+    GUACHENE: CO03
+    CALOTO: CO03
+    TOCANCIPA: CO99
+  # Si quiere forzar la homologación planta-referencia -> nodo SAP (si se deja vacío se infiere de SAP)
+  plantas_referencia: {}      # ej: {CO06: CO01, CO12: CO02}
+
+# ----------------------------------------------------------------------------
+# Almacenamiento
+# ----------------------------------------------------------------------------
+almacenamiento:
+  # Días de cobertura de inventario en CEDI. "auto" = se calibra con los datos: se asume que el CEDI
+  # 'nodo_calibracion_doi' está lleno en AS-IS (hoy desborda a la bodega externa CO99).
+  # Puede poner un número (ej. 15) para sobreescribirlo.
+  dias_inventario: auto
+  nodo_calibracion_doi: CO01
+  m3_por_posicion: null             # null = se calcula del maestro de referencias (cajas x estiba x m3 caja)
+  utilizacion_maxima: 0.85          # [SUPUESTO] info_cedi no trae Utilizacion_Max_Operable_Pct
+  penalidad_deficit_cop_m3: 400000  # costo de penalización por m3 de inventario que no cabe (señal de déficit)
+  costos_por_modalidad:             # [SUPUESTO] costos variables por m3 movido (entrada+salida)
+    Propio:   {manejo_cop_m3: 4500, posicion_cop_mes: 0}
+    "Operador logístico (3PL)": {manejo_cop_m3: 8000, posicion_cop_mes: 0}
+  # El costo fijo mensual sale de parametros_plantas.csv. Nodos "opcionales" pueden cerrarse
+  # (el modelo decide si los usa pagando su costo fijo).
+  nodos_opcionales_tobe: [CO99]     # bodega externa actual (3PL Tocancipá): ¿se mantiene o no?
+  ajustes_nodo:                     # ej: {CO02: {posiciones_adicionales: 2000, manejo_cop_m3: 5000}}
+    CO99: {tarifas_salida_como: CO01}   # CO99 no registra despachos propios: sale como Cajicá
+
+# Bodegas externas candidatas (nuevas). Todas [SUPUESTO]: cotice y ajuste.
+bodegas_candidatas:
+  - id: BE_ANTIOQUIA
+    nombre: Bodega externa Itagüí (Antioquia)
+    ciudad: ITAGUI
+    lat: 6.172
+    lon: -75.611
+    posiciones: 6000
+    costo_fijo_cop_mes: 60000000
+    posicion_cop_mes: 38000
+    manejo_cop_m3: 9000
+    tarifas_salida_como: CO02         # usa las tarifas de distribución observadas de este CEDI
+    tarifa_entrada_como: null         # null = estima por distancia desde cada planta
+    activa: true
+  - id: BE_SABANA
+    nombre: Bodega externa Funza (Sabana de Bogotá)
+    ciudad: FUNZA
+    lat: 4.716
+    lon: -74.211
+    posiciones: 8000
+    costo_fijo_cop_mes: 70000000
+    posicion_cop_mes: 36000
+    manejo_cop_m3: 9000
+    tarifas_salida_como: CO01
+    tarifa_entrada_como: CO99         # usa la tarifa observada Cajicá -> bodega externa Tocancipá
+    activa: true
+
+# ----------------------------------------------------------------------------
+# Producción
+# ----------------------------------------------------------------------------
+produccion:
+  planta_cerrada: CO10
+  excluir_descontinuadas: true        # referencias "Descontinuada" se excluyen en todos los escenarios (comparables)
+  utilizacion_maxima_planta: 1.0
+  crecimiento_demanda: 0.0            # 0.05 = +5 % sobre la demanda base
+
+# ----------------------------------------------------------------------------
+# Escenarios a optimizar (cada uno hereda lo anterior y sobreescribe)
+#   produccion: asis (planta actual SAP) | tobe (planta nueva maestro referencias) | flexible (el modelo reasigna)
+#   bodegas_candidatas: incluir bodegas externas nuevas
+#   limitar_traslados_asis: traslados a CEDIs de otra ciudad no pueden superar el nivel AS-IS
+#   cerrar_opcionales: los nodos opcionales (CO99) quedan cerrados
+#   opcionales_fijos_abiertos: los nodos opcionales (CO99) quedan abiertos (costo fijo se paga)
+# ----------------------------------------------------------------------------
+escenarios:
+  - id: E0_ASIS_OPT
+    nombre: "AS-IS optimizado (CO10 operando)"
+    produccion: asis
+    cerrar_planta: false
+    bodegas_candidatas: false
+    opcionales_fijos_abiertos: true
+  - id: E1_TRASLADO_CEDI
+    nombre: "Opción B: traslado a CEDI de otra ciudad (sin bodega externa)"
+    produccion: tobe
+    cerrar_planta: true
+    bodegas_candidatas: false
+    cerrar_opcionales: true
+  - id: E2_BODEGA_EXTERNA
+    nombre: "Opción A: bodega externa (se mantiene CO99; traslados a otros CEDI limitados al nivel AS-IS)"
+    produccion: tobe
+    cerrar_planta: true
+    bodegas_candidatas: true
+    opcionales_fijos_abiertos: true
+    limitar_traslados_asis: true
+  - id: E3_OPTIMO
+    nombre: "Óptimo TO-BE (el modelo combina libremente)"
+    produccion: tobe
+    cerrar_planta: true
+    bodegas_candidatas: true
+  - id: E4_OPTIMO_FLEX
+    nombre: "Óptimo TO-BE reasignando producción entre plantas compatibles"
+    produccion: flexible
+    cerrar_planta: true
+    bodegas_candidatas: true
+
+sensibilidad:
+  activa: true
+  escenario_base: E3_OPTIMO
+  dias_inventario: [10, 15, 20, 25, 30, 35]
+  factor_flete: [0.9, 1.0, 1.1, 1.2]
+
+solver:
+  tiempo_maximo_seg: 300
+  gap_relativo: 0.001
