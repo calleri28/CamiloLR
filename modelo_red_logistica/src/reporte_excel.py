@@ -17,8 +17,22 @@ def _sin_inf(df: pd.DataFrame) -> pd.DataFrame:
 
 from .preparacion import Preparado
 
-COMPONENTES = ["Flete traslado (XI)", "Flete distribución", "Manejo en almacén", "Posiciones bodega externa",
-               "Fijo almacenes opcionales", "Fijo red (nodos fijos)", "Penalización déficit capacidad"]
+from .modelo_optimizacion import COMPONENTES  # noqa: E402
+
+TOTALES = ["Total transporte", "Total almacenamiento", "Total fijo nodos", "Total"]
+
+
+def _c_in(sim: dict, k: str, w: str) -> float:
+    """Tarifa de traslado ponderada terceros / flota propia (imputada) de la ruta k -> w."""
+    if k == w:
+        return 0.0
+    L = sim["lanes"][k][w]
+    tp = L["tt"] if L["tp"] is None else L["tp"]
+    return (1 - L["s"]) * L["tt"] + L["s"] * tp
+
+
+def _almacenes_sim(sim: dict) -> list:
+    return [n for n in sim["almacenes"] if n["id"] != sim["planta_cerrada"]]
 
 TIPO_TXT = {"propio": "CEDI propio", "3pl": "CEDI 3PL", "bodega_externa_actual": "Bodega externa actual",
             "candidata": "Bodega externa candidata"}
@@ -91,7 +105,7 @@ class _Libro:
 
 def _hojas_tarifas(lb: _Libro, sim: dict):
     b, f = lb.b, lb.f
-    W = sim["almacenes"]
+    W = _almacenes_sim(sim)
     K, R = sim["plantas"], sim["regiones"]
     wt = b.add_worksheet("Tarifas_traslado")
     wt.write(0, 0, "Planta \\ Almacén", f["h"])
@@ -100,9 +114,10 @@ def _hojas_tarifas(lb: _Libro, sim: dict):
     for i, k in enumerate(K):
         wt.write(i + 1, 0, k, f["h"])
         for j, n in enumerate(W):
-            wt.write_number(i + 1, j + 1, sim["c_in"][k][n["id"]], f["cop"])
+            wt.write_number(i + 1, j + 1, _c_in(sim, k, n["id"]), f["cop"])
     wt.set_column(0, len(W), 14)
-    wt.write(len(K) + 2, 0, "COP/m3. Observada en SAP (XI, flete válido) o estimada por distancia (regresión).", f["sub"])
+    wt.write(len(K) + 2, 0, "COP/m3. Ponderada terceros (flete SAP válido) + flota propia (flete imputado). Rutas sin "
+                            "historia: estimada por distancia.", f["sub"])
     wz = b.add_worksheet("Tarifas_zona")
     wz.write(0, 0, "Zona \\ Almacén", f["h"])
     for j, n in enumerate(W):
@@ -118,7 +133,7 @@ def _hojas_tarifas(lb: _Libro, sim: dict):
 
 def _hoja_simulador(lb: _Libro, prep: Preparado, sim: dict, cfg: dict, base_sim: dict):
     b, f = lb.b, lb.f
-    W = sim["almacenes"]
+    W = _almacenes_sim(sim)
     K, R = sim["plantas"], sim["regiones"]
     ult_col_t = xl_col_to_name(len(W))
     rng_t = f"Tarifas_traslado!$B$2:${ult_col_t}${len(K) + 1}"
@@ -144,7 +159,7 @@ def _hoja_simulador(lb: _Libro, prep: Preparado, sim: dict, cfg: dict, base_sim:
     for i, (lab, val, fmt) in enumerate(entradas):
         ws.write(3 + i, 0, lab, f["bold"])
         ws.write(3 + i, 1, val, fmt)
-    ws.data_validation(8, 1, 8, 1, {"validate": "list", "source": K})
+    ws.data_validation(8, 1, 8, 1, {"validate": "list", "source": [k for k in K if k != sim["planta_cerrada"]]})
     ws.write(11, 0, "Volumen efectivo (m3/mes)", f["bold"])
     ws.write_formula(11, 1, "=B10*(1+B11)", f["cop"])
     DOI, UT, M3P, FXI, FDI, PL, VOL = "$B$4", "$B$5", "$B$6", "$B$7", "$B$8", "$B$9", "$B$12"
@@ -169,7 +184,8 @@ def _hoja_simulador(lb: _Libro, prep: Preparado, sim: dict, cfg: dict, base_sim:
     hdr = ["Almacén", "Nombre", "Tipo", "Posiciones totales", "Ocupación base (m3/mes despachados)",
            "Posiciones libres", "Posiciones requeridas", "¿Cabe?", "Manejo COP/m3", "Costo posición COP/mes",
            "Costo fijo incremental COP/mes", "Tarifa traslado desde planta COP/m3", "Distribución ponderada COP/m3",
-           "Costo unitario total COP/m3", "Costo variable COP/mes", "Costo total COP/mes", "Ranking (si cabe)"]
+           "Costo unitario total COP/m3", "Costo variable COP/mes", "Costo total COP/mes", "Ranking (si cabe)",
+           "Costo transporte COP/mes", "Costo almacenamiento COP/mes"]
     ws.write(t0 - 1, 0, "Opciones de almacenamiento", f["titulo"])
     for j, h in enumerate(hdr):
         ws.write(t0, j, h, f["h"])
@@ -196,10 +212,12 @@ def _hoja_simulador(lb: _Libro, prep: Preparado, sim: dict, cfg: dict, base_sim:
         ws.write_formula(r, 14, f"=N{R1}*{VOL}", f["cop"])
         ws.write_formula(r, 15, f"=O{R1}+K{R1}", f["cop"])
         ws.write_formula(r, 16, f'=IF(H{R1}="Sí",COUNTIFS($H${n0 + 1}:$H${n1 + 1},"Sí",$P${n0 + 1}:$P${n1 + 1},"<"&P{R1})+1,"-")', f["txt"])
+        ws.write_formula(r, 17, f"=(L{R1}+M{R1})*{VOL}", f["cop"])
+        ws.write_formula(r, 18, f"=(I{R1}+J{R1}*{DOI}/30/{M3P})*{VOL}+K{R1}", f["cop"])
     ws.set_column(0, 0, 34)
     ws.set_column(1, 1, 26)
     ws.set_column(2, 2, 24)
-    ws.set_column(3, 16, 16)
+    ws.set_column(3, 18, 16)
     ws.set_column(3, 3, 16)
     rA, rC, rH, rP, rQ = (f"$A${n0 + 1}:$A${n1 + 1}", f"$C${n0 + 1}:$C${n1 + 1}", f"$H${n0 + 1}:$H${n1 + 1}",
                           f"$P${n0 + 1}:$P${n1 + 1}", f"$Q${n0 + 1}:$Q${n1 + 1}")
@@ -285,14 +303,14 @@ def generar_excel(ruta: Path, prep: Preparado, cfg: dict, res: dict, calidad: pd
     for j, k in enumerate(cols):
         ws.write(r0 + 1, j + 1, res[k]["nombre"], f["h"])
     ws.set_row(r0 + 1, 60)
-    for i, comp in enumerate(COMPONENTES + ["Total"]):
-        ws.write(r0 + 2 + i, 0, comp, f["bold"] if comp == "Total" else f["txt"])
+    for i, comp in enumerate(COMPONENTES + TOTALES):
+        ws.write(r0 + 2 + i, 0, comp, f["bold"] if comp.startswith("Total") else f["txt"])
         for j, k in enumerate(cols):
             ws.write_number(r0 + 2 + i, j + 1, res[k]["costos"].get(comp, 0.0), f["cop"])
     ws.set_column(0, 0, 34)
     ws.set_column(1, len(cols), 22)
     ch = b.add_chart({"type": "bar", "subtype": "stacked"})
-    paleta = ["#2a78d6", "#eb6834", "#1baf7a", "#eda100", "#e87ba4", "#898781", "#e34948"]
+    paleta = ["#2a78d6", "#eb6834", "#1baf7a", "#eda100", "#e87ba4", "#008300", "#6250d6", "#e34948"]
     for i, comp in enumerate(COMPONENTES):
         ch.add_series({"name": ["Resumen", r0 + 2 + i, 0], "categories": ["Resumen", r0 + 1, 1, r0 + 1, len(cols)],
                        "values": ["Resumen", r0 + 2 + i, 1, r0 + 2 + i, len(cols)], "fill": {"color": paleta[i]},
@@ -302,7 +320,7 @@ def generar_excel(ruta: Path, prep: Preparado, cfg: dict, res: dict, calidad: pd
     ch.set_y_axis({"reverse": True})
     ch.set_size({"width": 980, "height": 460})
     ch.set_legend({"position": "bottom"})
-    ws.insert_chart(r0 + 11, 0, ch)
+    ws.insert_chart(r0 + 15, 0, ch)
 
     # ------------------------------------------------------------ Simulador (fórmulas)
     _hoja_simulador(lb, prep, sim, cfg, resumen["base_simulador"])

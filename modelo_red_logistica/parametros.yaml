@@ -21,6 +21,13 @@ limpieza:
   volumen_minimo_lane_m3: 20  # volumen mínimo (en el periodo base) para confiar en la tarifa observada de una ruta
   factor_ruta_km: 1.30        # km por carretera = km línea recta x factor (topografía colombiana)
 
+# Traslados XI con flete en 0 / 1 peso = viajes de FLOTA PROPIA: tienen costo aunque SAP no lo registre.
+imputacion_xi:
+  metodo: similares        # similares = tarifa COP/m3 de viajes de terceros en la misma ruta (o banda de distancia)
+                           # km        = costo fijo por viaje + COP/km x distancia
+  costo_km_cop: null       # null = se ajusta con los viajes de terceros (regresión costo viaje vs km)
+  costo_fijo_viaje_cop: null
+
 periodo_base:                 # meses completos ANTES del cierre para construir demanda y tarifas
   desde: "2025-07"
   hasta: "2026-06"
@@ -118,6 +125,11 @@ escenarios:
     cerrar_planta: false
     bodegas_candidatas: false
     opcionales_fijos_abiertos: true
+  - id: E5_CIERRE_RED_ACTUAL
+    nombre: "Cierre CO10 sin re-optimizar (red de distribución actual)"
+    tipo: red_actual            # evaluación: cada ciudad sigue atendida por los mismos CEDI de hoy
+    produccion: tobe
+    cerrar_planta: true
   - id: E1_TRASLADO_CEDI
     nombre: "Opción B: traslado a CEDI de otra ciudad (sin bodega externa)"
     produccion: tobe

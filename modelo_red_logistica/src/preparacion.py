@@ -40,6 +40,7 @@ class Preparado:
     m3_por_posicion: float
     meses_base: int
     meses_lista: list
+    viajes_xi: pd.DataFrame = None
     series: dict = field(default_factory=dict)
     info: dict = field(default_factory=dict)
 
@@ -323,17 +324,109 @@ def preparar(d: dict, cfg: dict) -> Preparado:
     td["confiable"] = td.vol >= vmin
     td = td.rename(columns={"CEDI": "origen", "ciudad": "destino"})
 
-    # tarifas de traslado observadas (nodo -> nodo)
+    # ---------------------------------------------------------- Traslados XI: imputación flota propia
+    # Un viaje XI cuyas líneas tienen todas importe <= umbral es un viaje de flota propia: tiene costo
+    # aunque SAP no lo registre. Se imputa por viajes similares (misma ruta / banda de distancia) o por km.
+    imp_cfg = cfg.get("imputacion_xi") or {}
+    metodo = imp_cfg.get("metodo", "similares")
+    xi_all_l = sap[sap.es_xi & sap.nodo_destino.notna()].copy()
+    xi_all_l["viaje_k"] = xi_all_l["viaje_n"].astype(object).where(xi_all_l["viaje_n"].notna(),
+                                                                   "L" + xi_all_l.index.astype(str))
+    vj = (xi_all_l.groupby("viaje_k")
+          .agg(origen=("nodo_origen", "first"), destino=("nodo_destino", "first"), imp=("imp", "sum"),
+               vol=("vol", "sum"), validas=("flete_valido", "sum"), en_base=("en_base", "max")))
+    vj["propia"] = vj.validas == 0
+    vj["km"] = [0.0 if o == dd else km_nodo_nodo(o, dd) for o, dd in zip(vj.origen, vj.destino)]
+    terc = vj[~vj.propia & vj.en_base & (vj.vol > 0) & (vj.km > 0)]
+    terc = terc[(terc.imp / terc.vol).between(*info["outlier_rango_xi"])]
+    lane_t = terc.groupby(["origen", "destino"]).agg(imp=("imp", "sum"), vol=("vol", "sum"))
+    lane_t = (lane_t.imp / lane_t.vol)[lane_t.vol >= vmin].to_dict()
+    bandas = [0, 60, 150, 300, 500, 800, 1e9]
+    terc_b = pd.cut(terc.km, bandas)
+    banda_t = (terc.groupby(terc_b, observed=True).imp.sum() / terc.groupby(terc_b, observed=True).vol.sum())
+    # costo por viaje = fijo + COP/km * km, ajustado con viajes de terceros con carga completa (>= 15 m3)
+    full = terc[terc.vol >= 15]
+    if len(full) >= 10:
+        b_km, a_fijo = np.polyfit(full.km.values, full.imp.values, 1)
+    else:
+        b_km, a_fijo = 3500.0, 300000.0
+    a_fijo = max(float(a_fijo), 0.0)
+    copkm = float(imp_cfg.get("costo_km_cop") or b_km)
+    fijo_v = float(imp_cfg.get("costo_fijo_viaje_cop") if imp_cfg.get("costo_fijo_viaje_cop") is not None else a_fijo)
+    info["imputacion_xi"] = {"metodo": metodo, "costo_km_cop": copkm, "costo_fijo_viaje_cop": fijo_v,
+                             "costo_km_ajustado": float(b_km), "fijo_ajustado": float(a_fijo),
+                             "bandas": {str(k): float(v) for k, v in banda_t.items()}}
+
+    def tarifa_similar(o, dd, km):
+        if (o, dd) in lane_t:
+            return lane_t[(o, dd)], "misma ruta"
+        if np.isnan(km):
+            return float(np.nanmedian(list(lane_t.values()))), "mediana rutas"
+        idx = np.searchsorted(bandas, km, side="right") - 1
+        iv = pd.Interval(bandas[max(idx, 0)], bandas[max(idx, 0) + 1], closed="right")
+        if iv in banda_t.index and not np.isnan(banda_t[iv]):
+            return float(banda_t[iv]), "banda de distancia"
+        return reg_xi_tmp["a"] + reg_xi_tmp["b"] * km, "regresión"
+
+    reg_xi_tmp = _ajustar_regresion(pd.DataFrame({"km": terc.km, "tarifa": terc.imp / terc.vol, "vol": terc.vol}))
+    prop = vj[vj.propia].copy()
+    sim_res = [tarifa_similar(o, dd, km) for o, dd, km in zip(prop.origen, prop.destino, prop.km)]
+    prop["tarifa_similar"] = [r[0] for r in sim_res]
+    prop["fuente_similar"] = [r[1] for r in sim_res]
+    mismo = prop.origen == prop.destino
+    prop.loc[mismo, "fuente_similar"] = "mismo nodo (sin costo)"
+    prop["imp_similar"] = np.where(mismo, 0.0, prop.tarifa_similar * prop.vol)
+    prop["imp_km"] = np.where(mismo | prop.km.isna(), 0.0, fijo_v + copkm * prop.km.fillna(0))
+    prop["imp_imputado"] = prop["imp_km"] if metodo == "km" else prop["imp_similar"]
+    info["imputacion_xi"].update({
+        "viajes_propia": int(len(prop)), "viajes_propia_base": int(prop.en_base.sum()),
+        "vol_propia_mes": float(prop[prop.en_base].vol.sum() / n_meses),
+        "vol_tercero_mes": float(vj[~vj.propia & vj.en_base].vol.sum() / n_meses),
+        "imp_similar_mes": float(prop[prop.en_base].imp_similar.sum() / n_meses),
+        "imp_km_mes": float(prop[prop.en_base].imp_km.sum() / n_meses),
+        "imp_tercero_mes": float(vj[~vj.propia & vj.en_base].imp.sum() / n_meses),
+        "viajes_mismo_nodo": int(mismo.sum()),
+        "fuente_similar": prop[prop.en_base].groupby("fuente_similar").vol.sum().div(n_meses).round(1).to_dict(),
+    })
+    # reparto del flete imputado a las líneas (proporcional al volumen)
+    fac = (prop.imp_imputado / prop.vol.where(prop.vol > 0)).fillna(0)
+    sap["flota_propia"] = False
+    sap["imp_imputado"] = 0.0
+    lineas = xi_all_l[xi_all_l.viaje_k.isin(prop.index)]
+    sap.loc[lineas.index, "flota_propia"] = True
+    sap.loc[lineas.index, "imp_imputado"] = lineas.vol.values * lineas.viaje_k.map(fac).values
+    LOG.info("Imputación XI flota propia (%s): %s viajes, %.0f m3/mes, %.0f MCOP/mes (similares %.0f | km %.0f)",
+             metodo, f"{len(prop):,}", info["imputacion_xi"]["vol_propia_mes"],
+             (info["imputacion_xi"]["imp_km_mes"] if metodo == "km" else info["imputacion_xi"]["imp_similar_mes"]) / 1e6,
+             info["imputacion_xi"]["imp_similar_mes"] / 1e6, info["imputacion_xi"]["imp_km_mes"] / 1e6)
+    viajes_xi = vj.reset_index()
+    viajes_xi = viajes_xi.merge(prop[["tarifa_similar", "fuente_similar", "imp_similar", "imp_km", "imp_imputado"]],
+                                left_on="viaje_k", right_index=True, how="left")
+    base = sap[sap.en_base]
+
+    # tarifas de traslado por ruta: terceros (líneas válidas sin atípicos) + flota propia (imputada)
     xib = base[base.es_xi & base.nodo_destino.notna() & (base.nodo_origen != base.nodo_destino)]
-    tx = (xib[xib.usar_tarifa].groupby(["nodo_origen", "nodo_destino"])
-          .agg(imp=("imp", "sum"), vol=("vol", "sum"), lineas=("imp", "size")).reset_index())
+    tt = xib[xib.usar_tarifa & ~xib.flota_propia].groupby(["nodo_origen", "nodo_destino"]).agg(
+        imp_terc=("imp", "sum"), vol_terc=("vol", "sum"), lineas=("imp", "size"))
+    tp = xib[xib.flota_propia].groupby(["nodo_origen", "nodo_destino"]).agg(
+        imp_prop=("imp_imputado", "sum"), vol_prop=("vol", "sum"))
+    tx = tt.join(tp, how="outer").fillna({"imp_terc": 0, "vol_terc": 0, "lineas": 0, "imp_prop": 0, "vol_prop": 0}).reset_index()
+    tx["imp"] = tx.imp_terc + tx.imp_prop
+    tx["vol"] = tx.vol_terc + tx.vol_prop
     tx["tarifa"] = tx.imp / tx.vol
+    tx["tarifa_tercero"] = (tx.imp_terc / tx.vol_terc.where(tx.vol_terc > 0))
+    tx["tarifa_propia"] = (tx.imp_prop / tx.vol_prop.where(tx.vol_prop > 0))
+    tx["pct_flota_propia"] = tx.vol_prop / tx.vol
     tx["km"] = [km_nodo_nodo(o, x) for o, x in zip(tx.nodo_origen, tx.nodo_destino)]
+    m3v = (prop[prop.en_base].groupby(["origen", "destino"]).vol.median())
+    tx["m3_viaje_propia"] = [m3v.get((o, x), np.nan) for o, x in zip(tx.nodo_origen, tx.nodo_destino)]
     tx["confiable"] = tx.vol >= vmin
     tx = tx.rename(columns={"nodo_origen": "origen", "nodo_destino": "destino"})
+    # la regresión por distancia (rutas sin historia) se ajusta con tarifas de terceros
+    tx_reg = tx[(tx.vol_terc >= vmin)].assign(tarifa=lambda d_: d_.tarifa_tercero, vol=lambda d_: d_.vol_terc)
 
     reg = {"distribucion": _ajustar_regresion(td[td.confiable]),
-           "traslado": _ajustar_regresion(tx[tx.confiable])}
+           "traslado": _ajustar_regresion(tx_reg)}
     LOG.info("Regresión tarifa distribución: %.0f + %.1f*km (R2=%.2f, n=%s)", reg["distribucion"]["a"],
              reg["distribucion"]["b"], reg["distribucion"]["r2"], reg["distribucion"]["n"])
     LOG.info("Regresión tarifa traslado:     %.0f + %.1f*km (R2=%.2f, n=%s)", reg["traslado"]["a"],
@@ -466,4 +559,4 @@ def preparar(d: dict, cfg: dict) -> Preparado:
                      tarifas_dist=td, tarifas_xi=tx, regresion=reg, factor_cedi=factor_cedi,
                      xi_asis=xi_asis, dist_asis=dist_asis, homolog_plantas=homolog_plantas,
                      homolog_clientes=homolog_clientes, tiempos_lane=tiempos_lane, m3_por_posicion=m3_pos,
-                     meses_base=n_meses, meses_lista=meses, series=series, info=info)
+                     meses_base=n_meses, meses_lista=meses, series=series, info=info, viajes_xi=viajes_xi)

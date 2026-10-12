@@ -100,6 +100,25 @@ Edite `parametros.yaml` y vuelva a ejecutar. Puede cambiar, entre otros:
 
 ---
 
+## Novedades (versión 2)
+- **Flete imputado a traslados XI de flota propia.** Son los viajes con todas sus líneas en 0 o 1 peso. Se imputa en `parametros.yaml > imputacion_xi` con dos métodos: `similares`, que usa la tarifa de terceros en la misma ruta o, si no hay, en la misma banda de distancia, y `km`, que usa costo fijo + COP/km ajustado con los viajes de terceros.
+- **Costos desagregados** en **transporte** (XI terceros, XI flota propia, distribución), **almacenamiento** (manejo, posiciones, fijo de bodegas externas) y **fijos de plantas/CEDI**.
+- **Nuevo escenario E5 "Cierre CO10 sin re-optimizar"**: mantiene la red de distribución actual y solo cambia la planta que produce.
+- **Waterfall** (puente de costos) entre dos escenarios cualesquiera.
+- **Mapa de flujos** que funciona sin internet, con 4 vistas por escenario:
+  1. planta → cliente;
+  2. CEDI → cliente;
+  3. traslados XI;
+  4. mercado N/E.
+
+  Niveles: cliente, ciudad, departamento y zona comercial. Filtros, comparación entre escenarios y descarga en CSV.
+- **Simulador ampliado** con 5 escenarios a la vez: Actual, A, B, Óptimo y Personalizado. Se pueden ajustar:
+  - cierre de CO10 y reparto de su producción;
+  - política de la bodega CO99, bodegas candidatas y límite de traslados;
+  - método y costo de la flota propia (COP/km, fijo por viaje), factores de terceros y de distribución;
+  - crecimiento por mercado y por zona, y tarifa por zona;
+  - capacidad y costos de cada almacén.
+
 ## Qué hace el modelo
 
 ### Reglas de negocio con los datos

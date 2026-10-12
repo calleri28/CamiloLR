@@ -25,6 +25,8 @@ def base_simulador(prep: Preparado, cfg: dict, sim: dict) -> dict:
     ocup = (base.groupby("CEDI").vol.sum() / prep.meses_base).to_dict()
     xi = prep.xi_asis.dropna(subset=["destino"])
     for n in sim["almacenes"]:
+        if n["id"] == cerrada:
+            continue
         if n["tipo"] == "bodega_externa_actual" and ocup.get(n["id"], 0) == 0:
             ocup[n["id"]] = float(xi[(xi.destino == n["id"]) & (xi.origen != n["id"])].vol_mes.sum())
     return {"doi": sim["defaults"]["dias_inventario"], "util": sim["defaults"]["utilizacion_maxima"], "planta": planta,
@@ -105,7 +107,17 @@ def construir_resumen(prep: Preparado, cfg: dict, res: dict, sens: pd.DataFrame,
         hall.append(f"Traslados entre nodos: {_n(E0['kpis']['traslados_m3_mes'])} m3/mes AS-IS optimizado vs "
                     f"{_n(O['kpis']['traslados_m3_mes'])} m3/mes en el óptimo TO-BE (~{_n(O['kpis']['viajes_traslado_mes'])} viajes/mes).")
     ar = res["ASIS_REAL"]
-    hall.append(f"Flete registrado en SAP (líneas válidas): {_m(ar['kpis']['flete_registrado_sap_cop_mes'])}/mes; valorizando todo el "
-                f"volumen a tarifa de ruta: {_m(ar['costos']['Flete traslado (XI)'] + ar['costos']['Flete distribución'])}/mes.")
+    imp = info["imputacion_xi"]
+    hall.append(f"Traslados XI de flota propia (viajes con flete en 0/1 peso): {_n(imp['viajes_propia_base'])} viajes en el periodo base, "
+                f"{_n(imp['vol_propia_mes'])} m3/mes ({imp['vol_propia_mes'] / (imp['vol_propia_mes'] + imp['vol_tercero_mes']):.0%} del XI). "
+                f"Flete imputado: {_m(imp['imp_similar_mes'])}/mes por viajes similares o {_m(imp['imp_km_mes'])}/mes por km "
+                f"({_n(imp['costo_fijo_viaje_cop'])} COP fijo + {_n(imp['costo_km_cop'])} COP/km); se usa '{imp['metodo']}'.")
+    hall.append(f"Costo actual real: transporte {_m(ar['costos']['Total transporte'])}/mes, almacenamiento {_m(ar['costos']['Total almacenamiento'])}/mes "
+                f"y fijos de plantas/CEDI {_m(ar['costos']['Total fijo nodos'])}/mes. Flete registrado en SAP: "
+                f"{_m(ar['kpis']['flete_registrado_sap_cop_mes'])}/mes + XI imputado {_m(ar['kpis']['flete_xi_imputado_cop_mes'])}/mes.")
+    E5 = res.get("E5_CIERRE_RED_ACTUAL")
+    if E5 and O:
+        hall.append(f"Si se cierra {cerrada} sin re-optimizar la red ({_m(E5['costos']['Total'])}/mes), el costo es "
+                    f"{_m(E5['costos']['Total'] - O['costos']['Total'])}/mes mayor que el óptimo TO-BE: ese es el valor de rediseñar la red.")
     return {"recomendacion": " ".join(rec), "recomendacion_lista": rec, "hallazgos": hall,
             "base_simulador": base_simulador(prep, cfg, sim)}

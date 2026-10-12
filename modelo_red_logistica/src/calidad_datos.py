@@ -39,7 +39,8 @@ def validar(d: dict, prep: Preparado, cfg: dict) -> pd.DataFrame:
                        "Tratados como importe inválido (misma regla de 0/1 peso)"))
     xi = sap.es_xi
     filas.append(_fila("SAP", "Traslados XI con flete inválido", int((xi & ~sap.flete_valido).sum()), int(xi.sum()), "Alta",
-                       "Tarifa XI calculada solo con líneas válidas"))
+                       "Son viajes de flota propia: se imputa su flete (viajes similares o por km); la tarifa de "
+                       "terceros usa solo líneas válidas"))
     filas.append(_fila("SAP", "Líneas con tarifa COP/m3 atípica (fuera de percentiles configurados)",
                        int(sap.outlier_tarifa.sum()), int(sap.flete_valido.sum()), "Media",
                        f"Excluidas de tarifas. Rango XI {info['outlier_rango_xi'][0]:,.0f}-{info['outlier_rango_xi'][1]:,.0f}; "
@@ -92,6 +93,11 @@ def validar(d: dict, prep: Preparado, cfg: dict) -> pd.DataFrame:
     multi = sap[sap.viaje_n.notna()].groupby("viaje_n").CEDI.nunique()
     filas.append(_fila("SAP", "Viajes con más de un CEDI", int((multi > 1).sum()), len(multi), "Baja",
                        "Se toma el primer CEDI para el cruce con TMS"))
+    im = info["imputacion_xi"]
+    filas.append(_fila("SAP", "Traslados XI de flota propia: viajes con todas sus líneas en 0/1 peso", im["viajes_propia"],
+                       int(sap[sap.es_xi].viaje_n.nunique()), "Alta",
+                       f"Flete imputado ({im['metodo']}): {im['imp_similar_mes'] / 1e6:,.0f} MCOP/mes por viajes similares / "
+                       f"{im['imp_km_mes'] / 1e6:,.0f} MCOP/mes por km. {im['viajes_mismo_nodo']:,} viajes dentro del mismo nodo sin costo"))
     xa = sap[sap.Tipo == "XA"]
     filas.append(_fila("SAP", "Tipo XA (clientes regulares, no nodos)", len(xa), len(sap), "Baja",
                        "Tratado como distribución, no como traslado"))

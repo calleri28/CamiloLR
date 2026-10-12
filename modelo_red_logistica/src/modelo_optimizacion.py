@@ -45,6 +45,13 @@ class Tarifario:
         tx = prep.tarifas_xi[prep.tarifas_xi.confiable]
         self.obs_dist = {(o, d): t for o, d, t in zip(td.origen, td.destino, td.tarifa)}
         self.obs_xi = {(o, d): t for o, d, t in zip(tx.origen, tx.destino, tx.tarifa)}
+        # composición tercero / flota propia por ruta (para separar costos y simular)
+        self.lane_xi = {(r.origen, r.destino): {"s": float(r.pct_flota_propia),
+                                                "t_terc": float(r.tarifa_tercero) if pd.notna(r.tarifa_tercero) else None,
+                                                "t_prop": float(r.tarifa_propia) if pd.notna(r.tarifa_propia) else None,
+                                                "km": float(r.km) if pd.notna(r.km) else None,
+                                                "m3v": float(r.m3_viaje_propia) if pd.notna(r.m3_viaje_propia) else None}
+                        for r in tx.itertuples()}
         self.coord_n = prep.nodos[["lat", "lon"]].astype(float)
         self.coord_c = prep.ciudades.set_index("ciudad")[["lat", "lon"]].astype(float)
         self.reg = prep.regresion
@@ -90,6 +97,25 @@ class Tarifario:
         self.fuente[("in",) + key] = fuente
         return float(val)
 
+    def comp_in(self, p, w) -> tuple[float, float, float]:
+        """(tarifa terceros, tarifa flota propia, participación flota propia) de la ruta p->w."""
+        if p == w:
+            return 0.0, 0.0, 0.0
+        como = self.p.nodos.at[w, "tarifa_entrada_como"] if w in self.p.nodos.index else None
+        key = (p, como) if isinstance(como, str) and (p, como) in self.lane_xi else (p, w)
+        c = self.c_in(p, w)
+        L = self.lane_xi.get(key) if key in self.obs_xi else None
+        if not L:
+            return c, 0.0, 0.0
+        s = L["s"]
+        tt = L["t_terc"] if L["t_terc"] is not None else c
+        tp = L["t_prop"] if L["t_prop"] is not None else c
+        if s >= 1:
+            return 0.0, tp, 1.0
+        if s <= 0:
+            return tt, 0.0, 0.0
+        return tt, tp, s
+
     def c_out(self, w, z) -> float:
         key = (w, z)
         if key in self._cache_out:
@@ -129,6 +155,7 @@ class Instancia:
     lim_xi: dict            # (p,w) -> m3/mes máximo
     constantes_fijas: float
     zona_ciudad: dict
+    bodegas_ext: set = None
 
 
 def parametros_escenario(cfg: dict, esc: dict, overrides: dict | None = None) -> dict:
@@ -139,6 +166,7 @@ def parametros_escenario(cfg: dict, esc: dict, overrides: dict | None = None) ->
         "penalidad": float(alm["penalidad_deficit_cop_m3"]),
         "factor_flete_traslado": 1.0,
         "factor_flete_distribucion": 1.0,
+        "factor_flota_propia": 1.0,
         "crecimiento_extra": 0.0,
     }
     p.update({k: v for k, v in esc.items() if k in p})
@@ -223,7 +251,8 @@ def construir_instancia(prep: Preparado, cfg: dict, esc: dict, params: dict) -> 
 
     return Instancia(esc=esc, params=params, D=D, P_k=P_k, W=list(activos.index), nodos=activos,
                      binarios=binarios, cap_planta=cap_planta, lim_xi=lim_xi, constantes_fijas=constantes,
-                     zona_ciudad=zona_ciudad)
+                     zona_ciudad=zona_ciudad,
+                     bodegas_ext=set(opcionales) | set(activos.index[activos.candidata.astype(bool)]))
 
 
 # ---------------------------------------------------------------------------
@@ -274,11 +303,16 @@ def resolver(inst: Instancia, tar: Tarifario, prep: Preparado, cfg: dict) -> dic
     ks = sorted({k for (_, k) in inst.D})
     Z_k = {k: [z for (z, kk) in inst.D if kk == k] for k in ks}
     x, y, c_in, c_out = {}, {}, {}, {}
+    fpr = prm.get("factor_flota_propia", 1.0)
+    comp = {}
     for k in ks:
         for p in inst.P_k[k]:
             for w in W:
-                c_in[(p, w)] = tar.c_in(p, w)
-                x[(p, w, k)] = m.var(c_in[(p, w)] * fxi)
+                if (p, w) not in comp:
+                    tt, tp, sp = tar.comp_in(p, w)
+                    comp[(p, w)] = (tt, tp, sp)
+                    c_in[(p, w)] = (1 - sp) * tt * fxi + sp * tp * fpr
+                x[(p, w, k)] = m.var(c_in[(p, w)])
         for z in Z_k[k]:
             for w in W:
                 if (w, z) not in c_out:
@@ -327,9 +361,7 @@ def resolver(inst: Instancia, tar: Tarifario, prep: Preparado, cfg: dict) -> dic
     fx = pd.DataFrame([(p, w, k, m.v(i)) for (p, w, k), i in x.items()],
                       columns=["planta", "almacen", "producto", "m3_mes"])
     fx = fx[fx.m3_mes > 1e-6].copy()
-    fx["tarifa_cop_m3"] = [c_in[(p, w)] * fxi for p, w in zip(fx.planta, fx.almacen)]
-    fx["costo_cop_mes"] = fx.m3_mes * fx.tarifa_cop_m3
-    fx["fuente_tarifa"] = [tar.fuente.get(("in", p, w), "mismo sitio") for p, w in zip(fx.planta, fx.almacen)]
+    fx = _costear_traslados(fx, comp, fxi, fpr, tar)
     fy = pd.DataFrame([(w, z, k, m.v(i)) for (w, z, k), i in y.items()],
                       columns=["almacen", "ciudad", "producto", "m3_mes"])
     fy = fy[fy.m3_mes > 1e-6].copy()
@@ -337,73 +369,181 @@ def resolver(inst: Instancia, tar: Tarifario, prep: Preparado, cfg: dict) -> dic
     fy["tarifa_cop_m3"] = [c_out[(w, z)] * fdi for w, z in zip(fy.almacen, fy.ciudad)]
     fy["costo_cop_mes"] = fy.m3_mes * fy.tarifa_cop_m3
     fy["fuente_tarifa"] = [tar.fuente.get(("out", w, z)) for w, z in zip(fy.almacen, fy.ciudad)]
+    abiertos = {w: (bool(round(m.v(a[w]))) if w in a else True) for w in W}
+    deficit = {w: (m.v(dfc[w]) if w in dfc else 0.0) for w in W}
+    rn = _tabla_nodos(W, nd, fx, fy, abiertos, deficit, doi, prep.m3_por_posicion, binarios=set(a))
+    penal = float(prm["penalidad"] * (sum(deficit.values()) + sum(m.v(i) for i in dpl.values())))
+    costos = armar_costos(fx, fy, rn, inst.bodegas_ext, penal)
+    kpis = _kpis(fx, fy, rn, costos, tar, prep)
+    kpis.update({"estado_solver": estado_txt, "tiempo_solucion_s": round(t, 1), "variables": len(m.c),
+                 "restricciones": m.n_restr, "deficit_planta_m3": float(sum(m.v(i) for i in dpl.values())),
+                 "bodegas_abiertas": [w for w in a if abiertos[w]], "bodegas_cerradas": [w for w in a if not abiertos[w]],
+                 "objetivo_cop": fobj})
+    return {"id": inst.esc["id"], "nombre": inst.esc.get("nombre", inst.esc["id"]), "params": dict(prm),
+            "modo_produccion": inst.esc.get("produccion", "tobe"),
+            "flujos_traslado": fx.reset_index(drop=True), "flujos_distribucion": fy.reset_index(drop=True),
+            "nodos": rn.reset_index(), "costos": costos, "kpis": kpis}
 
+
+# ---------------------------------------------------------------------------
+# Piezas comunes de costeo (modelo, red actual y AS-IS real)
+# ---------------------------------------------------------------------------
+COMPONENTES = ["Traslado XI terceros", "Traslado XI flota propia", "Distribución",
+               "Manejo en almacén", "Posiciones bodega externa", "Fijo bodegas externas",
+               "Fijo nodos (plantas y CEDI)", "Penalización déficit capacidad"]
+GRUPO = {"Traslado XI terceros": "Transporte", "Traslado XI flota propia": "Transporte", "Distribución": "Transporte",
+         "Manejo en almacén": "Almacenamiento", "Posiciones bodega externa": "Almacenamiento",
+         "Fijo bodegas externas": "Almacenamiento", "Fijo nodos (plantas y CEDI)": "Fijo nodos",
+         "Penalización déficit capacidad": "Penalización"}
+
+
+def _costear_traslados(fx, comp, fxi, fpr, tar):
+    fx = fx.copy()
+    tt = np.array([comp[(p, w)][0] for p, w in zip(fx.planta, fx.almacen)]) if len(fx) else np.array([])
+    tp = np.array([comp[(p, w)][1] for p, w in zip(fx.planta, fx.almacen)]) if len(fx) else np.array([])
+    sp = np.array([comp[(p, w)][2] for p, w in zip(fx.planta, fx.almacen)]) if len(fx) else np.array([])
+    fx["pct_flota_propia"] = sp
+    fx["costo_terceros_cop"] = fx.m3_mes.values * (1 - sp) * tt * fxi
+    fx["costo_flota_propia_cop"] = fx.m3_mes.values * sp * tp * fpr
+    fx["costo_cop_mes"] = fx.costo_terceros_cop + fx.costo_flota_propia_cop
+    fx["tarifa_cop_m3"] = (fx.costo_cop_mes / fx.m3_mes.where(fx.m3_mes > 0)).fillna(0)
+    fx["fuente_tarifa"] = [tar.fuente.get(("in", p, w), "mismo sitio") for p, w in zip(fx.planta, fx.almacen)]
+    return fx
+
+
+def _tabla_nodos(W, nd, fx, fy, abiertos, deficit, doi, m3p, binarios=frozenset()):
     thr = fy.groupby("almacen").m3_mes.sum().reindex(W).fillna(0)
-    rn = pd.DataFrame(index=W)
-    rn["nombre"] = nd["nombre"]
-    rn["tipo"] = np.where(nd["candidata"], "Bodega externa candidata", nd["Modalidad"])
-    rn["abierto"] = [bool(round(m.v(a[w]))) if w in a else True for w in W]
-    rn["decision"] = ["binaria" if w in a else "fija" for w in W]
+    rn = pd.DataFrame(index=pd.Index(W, name="almacen"))
+    rn["nombre"] = nd["nombre"].reindex(W)
+    rn["tipo"] = np.where(nd["candidata"].reindex(W).fillna(False).astype(bool), "Bodega externa candidata",
+                          nd["Modalidad"].reindex(W))
+    rn["abierto"] = [abiertos.get(w, True) for w in W]
+    rn["decision"] = ["binaria" if w in binarios else "fija" for w in W]
     rn["throughput_m3_mes"] = thr
     rn["inventario_m3"] = thr * doi / 30
-    rn["capacidad_m3"] = nd["cap_inv_m3"]
-    rn["posiciones_requeridas"] = rn.inventario_m3 / prep.m3_por_posicion
-    rn["posiciones_disponibles"] = nd["posiciones_total"]
-    rn["utilizacion"] = np.where(rn.capacidad_m3 > 0, rn.inventario_m3 / (nd["posiciones_total"] * prep.m3_por_posicion), 0)
-    rn["deficit_m3"] = [m.v(dfc[w]) if w in dfc else 0.0 for w in W]
-    rn["costo_manejo_cop"] = thr * nd["manejo_cop_m3"]
-    rn["costo_posiciones_cop"] = rn.posiciones_requeridas * nd["posicion_cop_mes"]
+    rn["capacidad_m3"] = nd["cap_inv_m3"].reindex(W)
+    rn["posiciones_requeridas"] = rn.inventario_m3 / m3p
+    rn["posiciones_disponibles"] = nd["posiciones_total"].reindex(W)
+    pos = nd["posiciones_total"].reindex(W) * m3p
+    rn["utilizacion"] = np.where(pos > 0, rn.inventario_m3 / pos.where(pos > 0), 0)
+    rn["deficit_m3"] = [deficit.get(w, 0.0) for w in W]
+    rn["costo_manejo_cop"] = thr * nd["manejo_cop_m3"].reindex(W)
+    rn["costo_posiciones_cop"] = rn.posiciones_requeridas * nd["posicion_cop_mes"].reindex(W)
     rn["costo_fijo_cop"] = [float(nd.at[w, "costo_fijo"]) if rn.at[w, "abierto"] else 0.0 for w in W]
-    rn["entrada_traslado_m3_mes"] = fx[fx.planta != fx.almacen].groupby("almacen").m3_mes.sum().reindex(W).fillna(0)
-    rn.index.name = "almacen"
+    rn["entrada_traslado_m3_mes"] = (fx[fx.planta != fx.almacen].groupby("almacen").m3_mes.sum().reindex(W).fillna(0)
+                                     if len(fx) else 0.0)
+    return rn
 
-    costos = {
-        "Flete traslado (XI)": float(fx.costo_cop_mes.sum()),
-        "Flete distribución": float(fy.costo_cop_mes.sum()),
+
+def armar_costos(fx, fy, rn, bodegas_ext, penal=0.0, extra=None) -> dict:
+    es_be = rn.index.isin(list(bodegas_ext))
+    c = {
+        "Traslado XI terceros": float(fx.costo_terceros_cop.sum()) if len(fx) else 0.0,
+        "Traslado XI flota propia": float(fx.costo_flota_propia_cop.sum()) if len(fx) else 0.0,
+        "Distribución": float(fy.costo_cop_mes.sum()),
         "Manejo en almacén": float(rn.costo_manejo_cop.sum()),
-        "Posiciones bodega externa": float(rn.costo_posiciones_cop.sum()),
-        "Fijo almacenes opcionales": float(sum(nd.at[w, "costo_fijo"] for w in a if rn.at[w, "abierto"])),
-        "Fijo red (nodos fijos)": inst.constantes_fijas,
-        "Penalización déficit capacidad": float(prm["penalidad"] * (sum(m.v(i) for i in dfc.values()) +
-                                                                   sum(m.v(i) for i in dpl.values()))),
+        "Posiciones bodega externa": float(rn.costo_posiciones_cop.fillna(0).sum()),
+        "Fijo bodegas externas": float(rn.loc[es_be, "costo_fijo_cop"].sum()),
+        "Fijo nodos (plantas y CEDI)": float(rn.loc[~es_be, "costo_fijo_cop"].sum()),
+        "Penalización déficit capacidad": float(penal),
     }
-    costos["Total"] = sum(costos.values())
-    costos["Total variable + fijo opcional"] = costos["Total"] - costos["Fijo red (nodos fijos)"]
+    for k, v in (extra or {}).items():
+        c[k] = c.get(k, 0.0) + v
+    for g in ("Transporte", "Almacenamiento", "Fijo nodos", "Penalización"):
+        c["Total " + g.lower()] = sum(v for k, v in c.items() if GRUPO.get(k) == g)
+    c["Total"] = sum(c[k] for k in COMPONENTES)
+    c["Total variable + fijo opcional"] = c["Total"] - c["Fijo nodos (plantas y CEDI)"]
+    return c
 
-    # KPIs
+
+def _kpis(fx, fy, rn, costos, tar, prep) -> dict:
     tl = prep.tiempos_lane
     t_xi = {(o, d): h for o, d, h in zip(tl[tl.es_xi].origen, tl[tl.es_xi].destino, tl[tl.es_xi].transito_h_mediana)}
     t_di = {(o, d): h for o, d, h in zip(tl[~tl.es_xi].origen, tl[~tl.es_xi].destino, tl[~tl.es_xi].transito_h_mediana)}
     m3v = {(o, d): v for o, d, v in zip(tl[tl.es_xi].origen, tl[tl.es_xi].destino, tl[tl.es_xi].m3_por_viaje)}
-    m3v_def = float(tl[tl.es_xi].m3_por_viaje.median()) if (tl.es_xi.any()) else 50.0
-    tras = fx[fx.planta != fx.almacen].copy()
-    tras["viajes_mes"] = [m / max(m3v.get((p, w), m3v_def), 1.0) for p, w, m in zip(tras.planta, tras.almacen, tras.m3_mes)]
-    fx.loc[tras.index, "viajes_mes"] = tras["viajes_mes"]
+    m3v_def = float(tl[tl.es_xi].m3_por_viaje.median()) if tl.es_xi.any() else 50.0
+    fx["viajes_mes"] = [m / max(m3v.get((p, w), m3v_def), 1.0) if p != w else 0.0
+                        for p, w, m in zip(fx.planta, fx.almacen, fx.m3_mes)]
     fx["transito_h"] = [t_xi.get((p, w), (tar.km_nn(p, w) / 45 + 3) if p != w else 0.0) for p, w in zip(fx.planta, fx.almacen)]
-    fy["transito_h"] = [t_di.get((w, z), (tar.km_nc(w, z) / 45 + 3) if not np.isnan(tar.km_nc(w, z)) else np.nan)
-                        for w, z in zip(fy.almacen, fy.ciudad)]
-    vol_total = float(fy.m3_mes.sum())
-    kpis = {
-        "estado_solver": estado_txt,
-        "tiempo_solucion_s": round(t, 1),
-        "variables": len(m.c),
-        "restricciones": m.n_restr,
-        "deficit_planta_m3": float(sum(m.v(i) for i in dpl.values())),
-        "demanda_m3_mes": vol_total,
+    kmz = [tar.km_nc(w, z) for w, z in zip(fy.almacen, fy.ciudad)]
+    fy["transito_h"] = [t_di.get((w, z), (k / 45 + 3) if not np.isnan(k) else np.nan) for w, z, k in zip(fy.almacen, fy.ciudad, kmz)]
+    tras = fx[fx.planta != fx.almacen]
+    vol = float(fy.m3_mes.sum())
+    vt = fy.loc[fy.transito_h.notna(), "m3_mes"].sum()
+    return {
+        "demanda_m3_mes": vol,
         "traslados_m3_mes": float(tras.m3_mes.sum()),
-        "viajes_traslado_mes": float(tras.viajes_mes.sum()) if len(tras) else 0.0,
-        "pct_volumen_trasladado": float(tras.m3_mes.sum()) / vol_total if vol_total else 0,
-        "costo_por_m3": costos["Total"] / vol_total if vol_total else 0,
-        "costo_variable_por_m3": costos["Total variable + fijo opcional"] / vol_total if vol_total else 0,
-        "transito_promedio_h": float(np.nansum(fy.transito_h * fy.m3_mes) / fy.loc[fy.transito_h.notna(), "m3_mes"].sum()
-                                     + np.nansum(fx.transito_h * fx.m3_mes) / vol_total),
+        "traslados_flota_propia_m3_mes": float((tras.m3_mes * tras.pct_flota_propia).sum()),
+        "viajes_traslado_mes": float(tras.viajes_mes.sum()),
+        "pct_volumen_trasladado": float(tras.m3_mes.sum()) / vol if vol else 0,
+        "costo_por_m3": costos["Total"] / vol if vol else 0,
+        "costo_transporte_por_m3": costos["Total transporte"] / vol if vol else 0,
+        "costo_almacenamiento_por_m3": costos["Total almacenamiento"] / vol if vol else 0,
+        "costo_variable_por_m3": costos["Total variable + fijo opcional"] / vol if vol else 0,
+        "transito_promedio_h": float(np.nansum(fy.transito_h * fy.m3_mes) / vt + np.nansum(fx.transito_h * fx.m3_mes) / vol)
+        if vol and vt else 0.0,
         "deficit_m3": float(rn.deficit_m3.sum()),
-        "bodegas_abiertas": [w for w in a if rn.at[w, "abierto"]],
-        "bodegas_cerradas": [w for w in a if not rn.at[w, "abierto"]],
-        "objetivo_cop": fobj,
     }
-    return {"id": inst.esc["id"], "nombre": inst.esc.get("nombre", inst.esc["id"]), "params": dict(prm),
-            "flujos_traslado": fx.reset_index(drop=True), "flujos_distribucion": fy.reset_index(drop=True),
+
+
+def evaluar_red_actual(prep: Preparado, tar: Tarifario, cfg: dict, esc: dict) -> dict:
+    """Cierre de planta SIN re-optimizar: cada ciudad sigue atendida desde los mismos CEDI que hoy
+    (por producto de cada planta de origen AS-IS); solo cambia la planta que produce."""
+    prm = parametros_escenario(cfg, esc)
+    inst = construir_instancia(prep, cfg, dict(esc, bodegas_candidatas=False, opcionales_fijos_abiertos=True), prm)
+    doi = prm["dias_inventario"]
+    W = inst.W
+    nd = inst.nodos
+    sap = prep.sap
+    base = sap[sap.en_base & ~sap.es_xi & sap.ciudad.notna()]
+    cerrada = cfg["produccion"]["planta_cerrada"] if esc.get("cerrar_planta") else None
+    sh = base[base.CEDI.isin(W)].groupby(["ciudad", "planta_asis", "CEDI"]).vol.sum()
+    sh_c = base[base.CEDI.isin(W)].groupby(["ciudad", "CEDI"]).vol.sum()
+    dem = prep.demanda[~prep.demanda.descontinuada] if cfg["produccion"].get("excluir_descontinuadas", True) else prep.demanda
+    dem = dem.dropna(subset=["ciudad"])
+    filas = []
+    for r in dem.itertuples():
+        k = r.planta_tobe if esc.get("produccion") == "tobe" else r.planta_asis
+        if k is None or (isinstance(k, float) and np.isnan(k)):
+            continue
+        try:
+            s = sh.loc[(r.ciudad, r.planta_asis)]
+        except KeyError:
+            s = sh_c.loc[r.ciudad] if r.ciudad in sh_c.index.get_level_values(0) else None
+        if s is None or s.sum() <= 0:
+            w = min(W, key=lambda ww: tar.c_out(ww, r.ciudad))
+            s = pd.Series({w: 1.0})
+        s = s / s.sum()
+        for w, f in s.items():
+            filas.append((w, r.ciudad, k, float(r.vol_mes) * f))
+    fy = pd.DataFrame(filas, columns=["almacen", "ciudad", "producto", "m3_mes"]).groupby(
+        ["almacen", "ciudad", "producto"], as_index=False).m3_mes.sum()
+    fy["zona"] = fy.ciudad.map(inst.zona_ciudad)
+    fy["tarifa_cop_m3"] = [tar.c_out(w, z) for w, z in zip(fy.almacen, fy.ciudad)]
+    fy["costo_cop_mes"] = fy.m3_mes * fy.tarifa_cop_m3
+    fy["fuente_tarifa"] = [tar.fuente.get(("out", w, z)) for w, z in zip(fy.almacen, fy.ciudad)]
+    fx = fy.groupby(["producto", "almacen"], as_index=False).m3_mes.sum().rename(columns={"producto": "planta"})
+    fx["producto"] = fx.planta
+    comp = {(p, w): tar.comp_in(p, w) for p, w in zip(fx.planta, fx.almacen)}
+    fx = _costear_traslados(fx, comp, 1.0, 1.0, tar)
+    # desborde: el inventario que no cabe se envía a la bodega externa actual (traslado + manejo)
+    thr = fy.groupby("almacen").m3_mes.sum().reindex(W).fillna(0)
+    inv = thr * doi / 30
+    exceso = (inv - nd["cap_inv_m3"].reindex(W)).clip(lower=0)
+    be = [w for w in W if w in set(cfg["almacenamiento"].get("nodos_opcionales_tobe") or [])]
+    extra = {}
+    if be and exceso.sum() > 0:
+        b0 = be[0]
+        flujo = exceso * 30 / doi
+        extra = {"Traslado XI terceros": float(sum(flujo[w] * tar.c_in(w, b0) for w in W if w != b0)),
+                 "Manejo en almacén": float(flujo.sum() * nd.at[b0, "manejo_cop_m3"])}
+    rn = _tabla_nodos(W, nd, fx, fy, {w: True for w in W}, exceso.to_dict(), doi, prep.m3_por_posicion)
+    costos = armar_costos(fx, fy, rn, inst.bodegas_ext, 0.0, extra)
+    kpis = _kpis(fx, fy, rn, costos, tar, prep)
+    kpis.update({"estado_solver": "evaluación (sin optimizar)", "bodegas_abiertas": be, "bodegas_cerradas": [],
+                 "desborde_m3_inventario": float(exceso.sum())})
+    return {"id": esc["id"], "nombre": esc.get("nombre", esc["id"]), "params": dict(prm),
+            "modo_produccion": esc.get("produccion", "tobe"), "flujos_traslado": fx, "flujos_distribucion": fy,
             "nodos": rn.reset_index(), "costos": costos, "kpis": kpis}
 
 
@@ -411,41 +551,47 @@ def resolver(inst: Instancia, tar: Tarifario, prep: Preparado, cfg: dict) -> dic
 # Evaluación de la red AS-IS real (flujos observados x tarifas)
 # ---------------------------------------------------------------------------
 def evaluar_asis_real(prep: Preparado, tar: Tarifario, cfg: dict) -> dict:
+    """Red actual tal como ocurrió: flujos observados en SAP. XI con flete registrado (terceros) +
+    flete imputado (flota propia); distribución valorizada con la tarifa de su ruta."""
     prm = parametros_escenario(cfg, {})
     doi = prm["dias_inventario"]
     n = prep.nodos[~prep.nodos.candidata].copy()
-    da = prep.dist_asis.copy()
-    da["tarifa_cop_m3"] = [tar.c_out(o, z) if o in n.index else np.nan for o, z in zip(da.origen, da.destino)]
-    da["costo_cop_mes"] = da.vol_mes * da.tarifa_cop_m3
-    xa = prep.xi_asis.dropna(subset=["destino"])
-    xa = xa[xa.origen != xa.destino].copy()
-    xa["tarifa_cop_m3"] = [tar.c_in(o, d) for o, d in zip(xa.origen, xa.destino)]
-    xa["costo_cop_mes"] = xa.vol_mes * xa.tarifa_cop_m3
-    thr = da.groupby("origen").vol_mes.sum().reindex(n.index).fillna(0)
-    # la bodega externa actual (CO99) recibe pero no registra despachos: su throughput = entradas
-    entradas = xa.groupby("destino").vol_mes.sum().reindex(n.index).fillna(0)
-    thr = np.maximum(thr, np.where(thr == 0, entradas, 0))
-    costos = {
-        "Flete traslado (XI)": float(xa.costo_cop_mes.sum()),
-        "Flete distribución": float(da.costo_cop_mes.sum()),
-        "Manejo en almacén": float((thr * n.manejo_cop_m3).sum()),
-        "Posiciones bodega externa": float((thr * doi / 30 / prep.m3_por_posicion * n.posicion_cop_mes).sum()),
-        "Fijo almacenes opcionales": 0.0,
-        "Fijo red (nodos fijos)": float(n.costo_fijo.sum()),
-        "Penalización déficit capacidad": 0.0,
-    }
-    costos["Total"] = sum(costos.values())
-    costos["Total variable + fijo opcional"] = costos["Total"] - costos["Fijo red (nodos fijos)"]
+    W = list(n.index)
     base = prep.sap[prep.sap.en_base]
-    flete_sap = float(base.loc[base.flete_valido, "imp"].sum()) / prep.meses_base
-    rn = pd.DataFrame({"nombre": n.nombre, "throughput_m3_mes": thr, "inventario_m3": thr * doi / 30,
-                       "capacidad_m3": n.posiciones_total * prep.m3_por_posicion * prm["utilizacion_maxima"]})
-    rn["utilizacion"] = rn.inventario_m3 / (n.posiciones_total * prep.m3_por_posicion)
-    vol = float(da.vol_mes.sum())
-    return {"id": "ASIS_REAL", "nombre": "AS-IS real (flujos observados SAP x tarifas)", "costos": costos,
-            "flujos_distribucion": da, "flujos_traslado": xa, "nodos": rn.reset_index().rename(columns={"ID_Nodo": "almacen", "index": "almacen"}),
-            "kpis": {"demanda_m3_mes": vol, "traslados_m3_mes": float(xa.vol_mes.sum()),
-                     "costo_por_m3": costos["Total"] / vol if vol else 0,
-                     "flete_registrado_sap_cop_mes": flete_sap,
-                     "costo_variable_por_m3": costos["Total variable + fijo opcional"] / vol if vol else 0},
-            "params": prm}
+    M = prep.meses_base
+    da = prep.dist_asis.copy()
+    fy = da.rename(columns={"origen": "almacen", "destino": "ciudad", "vol_mes": "m3_mes"})
+    fy["producto"] = "AS-IS"
+    fy["zona"] = fy.ciudad.map(prep.ciudades.set_index("ciudad")["zona"])
+    fy["tarifa_cop_m3"] = [tar.c_out(o, z) if o in n.index else np.nan for o, z in zip(fy.almacen, fy.ciudad)]
+    fy["costo_cop_mes"] = fy.m3_mes * fy.tarifa_cop_m3
+    fy["fuente_tarifa"] = [tar.fuente.get(("out", w, z)) for w, z in zip(fy.almacen, fy.ciudad)]
+    xi = base[base.es_xi]
+    g = xi.assign(terc=np.where(xi.flota_propia, 0.0, xi.imp), prop=xi.imp_imputado,
+                  vprop=np.where(xi.flota_propia, xi.vol, 0.0),
+                  destino=xi.nodo_destino.astype(object).where(xi.nodo_destino.notna(), "EXTERNO")) \
+        .groupby(["nodo_origen", "destino"]).agg(m3_mes=("vol", "sum"), costo_terceros_cop=("terc", "sum"),
+                                                  costo_flota_propia_cop=("prop", "sum"), vprop=("vprop", "sum"))
+    fx = (g / M).reset_index().rename(columns={"nodo_origen": "planta", "destino": "almacen"})
+    fx = fx[fx.planta != fx.almacen]
+    fx["producto"] = "AS-IS"
+    fx["pct_flota_propia"] = fx.vprop / fx.m3_mes
+    fx["costo_cop_mes"] = fx.costo_terceros_cop + fx.costo_flota_propia_cop
+    fx["tarifa_cop_m3"] = fx.costo_cop_mes / fx.m3_mes
+    fx["fuente_tarifa"] = "SAP real (+ imputación flota propia)"
+    fx = fx.drop(columns="vprop")
+    thr = fy.groupby("almacen").m3_mes.sum().reindex(W).fillna(0)
+    entradas = fx.groupby("almacen").m3_mes.sum().reindex(W).fillna(0)
+    thr = pd.Series(np.maximum(thr, np.where(thr == 0, entradas, 0)), index=W)   # CO99 recibe pero no despacha
+    fy_thr = pd.DataFrame({"almacen": W, "m3_mes": thr.values})
+    rn = _tabla_nodos(W, n, fx[fx.almacen.isin(W)], fy_thr, {w: True for w in W}, {}, doi, prep.m3_por_posicion)
+    be = set(cfg["almacenamiento"].get("nodos_opcionales_tobe") or [])
+    costos = armar_costos(fx, fy, rn, be)
+    kpis = _kpis(fx, fy, rn, costos, tar, prep)
+    kpis["flete_registrado_sap_cop_mes"] = float(base.loc[base.flete_valido, "imp"].sum()) / M
+    kpis["flete_xi_imputado_cop_mes"] = float(base.imp_imputado.sum()) / M
+    kpis["estado_solver"] = "observado"
+    kpis["bodegas_abiertas"] = sorted(be & set(W))
+    return {"id": "ASIS_REAL", "nombre": "Actual real (flujos observados SAP)", "costos": costos,
+            "modo_produccion": "real", "flujos_distribucion": fy, "flujos_traslado": fx, "nodos": rn.reset_index(),
+            "kpis": kpis, "params": prm}

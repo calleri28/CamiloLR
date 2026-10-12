@@ -26,6 +26,7 @@ import yaml  # noqa: E402
 from src.calidad_datos import validar  # noqa: E402
 from src.carga_datos import cargar_todo  # noqa: E402
 from src.escenarios import correr_escenarios, datos_simulador, punto_equilibrio, sensibilidad  # noqa: E402
+from src.flujos import clientes_geo, flujos_cliente  # noqa: E402
 from src.preparacion import preparar  # noqa: E402
 from src.reporte_excel import generar_excel  # noqa: E402
 from src.reporte_html import generar_html  # noqa: E402
@@ -77,7 +78,8 @@ def main():
     log.info("    %s", ruta_xlsx)
     log.info("=== 6/6 HTML")
     ruta_html = salidas / "reporte_red_logistica.html"
-    generar_html(ruta_html, prep, cfg, res, calidad, sens, sim, equilibrio, resumen)
+    flujos = flujos_cliente(prep, cfg, res)
+    generar_html(ruta_html, prep, cfg, res, calidad, sens, sim, equilibrio, resumen, flujos, clientes_geo(prep, d))
     log.info("    %s", ruta_html)
     log.info("Listo en %.0f s", time.time() - t0)
     if not args.no_abrir:
