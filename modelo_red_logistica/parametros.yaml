@@ -110,55 +110,86 @@ produccion:
   utilizacion_maxima_planta: 1.0
   crecimiento_demanda: 0.0            # 0.05 = +5 % sobre la demanda base
 
-# ----------------------------------------------------------------------------
-# Escenarios a optimizar (cada uno hereda lo anterior y sobreescribe)
-#   produccion: asis (planta actual SAP) | tobe (planta nueva maestro referencias) | flexible (el modelo reasigna)
-#   bodegas_candidatas: incluir bodegas externas nuevas
-#   limitar_traslados_asis: traslados a CEDIs de otra ciudad no pueden superar el nivel AS-IS
-#   cerrar_opcionales: los nodos opcionales (CO99) quedan cerrados
-#   opcionales_fijos_abiertos: los nodos opcionales (CO99) quedan abiertos (costo fijo se paga)
-# ----------------------------------------------------------------------------
-escenarios:
-  - id: E0_ASIS_OPT
-    nombre: "AS-IS optimizado (CO10 operando)"
-    produccion: asis
-    cerrar_planta: false
-    bodegas_candidatas: false
-    opcionales_fijos_abiertos: true
-  - id: E5_CIERRE_RED_ACTUAL
-    nombre: "Cierre CO10 sin re-optimizar (red de distribución actual)"
-    tipo: red_actual            # evaluación: cada ciudad sigue atendida por los mismos CEDI de hoy
-    produccion: tobe
-    cerrar_planta: true
-  - id: E1_TRASLADO_CEDI
-    nombre: "Opción B: traslado a CEDI de otra ciudad (sin bodega externa)"
-    produccion: tobe
-    cerrar_planta: true
-    bodegas_candidatas: false
-    cerrar_opcionales: true
-  - id: E2_BODEGA_EXTERNA
-    nombre: "Opción A: bodega externa (se mantiene CO99; traslados a otros CEDI limitados al nivel AS-IS)"
-    produccion: tobe
-    cerrar_planta: true
-    bodegas_candidatas: true
-    opcionales_fijos_abiertos: true
-    limitar_traslados_asis: true
-  - id: E3_OPTIMO
-    nombre: "Óptimo TO-BE (el modelo combina libremente)"
-    produccion: tobe
-    cerrar_planta: true
-    bodegas_candidatas: true
-  - id: E4_OPTIMO_FLEX
-    nombre: "Óptimo TO-BE reasignando producción entre plantas compatibles"
-    produccion: flexible
-    cerrar_planta: true
-    bodegas_candidatas: true
+# ============================================================================
+# MODELO MULTIPERIODO DIARIO (versión 3)
+# ============================================================================
+horizonte:
+  inicio_ventana: "2026-05-04"   # primer día de la ventana histórica (lunes) que se replica como demanda proyectada
+  dias_ventana: 56               # días que se envían al HTML (el horizonte puede moverse dentro de la ventana)
+  horizonte_dias: 28             # días que optimiza cada escenario
+  desplazamiento: 0              # día de la ventana en que empieza el horizonte
 
-sensibilidad:
+# Parámetros por defecto del modelo diario (los mismos que se editan en el HTML > Simulación)
+modelo:
+  proyeccion: replica            # replica = mismo patrón diario de la ventana histórica | perfil = promedio por día de semana
+  crecimiento: 0.0               # crecimiento global de demanda (0.10 = +10 %)
+  crec_N: 0.0                    # adicional mercado nacional
+  crec_E: 0.0                    # adicional exportación
+  utilizacion_maxima: 0.85       # [SUPUESTO] fracción usable de las posiciones
+  produccion:
+    modo: plan                   # plan = producción estable (fija) | flexible = el modelo decide dentro de la capacidad
+    dias_semana: 6               # [SUPUESTO] lunes a sábado
+    factor: 1.0                  # producción del horizonte / demanda del horizonte
+  inventario:
+    dias_inicial_planta: 8       # [SUPUESTO] inventario inicial en planta = días de demanda de sus productos
+    dias_inicial_cedi: 10        # [SUPUESTO] inventario inicial en CEDI = días de la demanda que atendió históricamente
+    dias_seguridad: 7            # [SUPUESTO] stock de seguridad objetivo en cada nodo (días de la demanda asignada)
+    final_min: 1.0               # inventario final de la red >= este factor x inventario inicial (evita "vaciar" la red)
+    final_por_nodo: true         # true: cada nodo termina con la cobertura (días) de la demanda que atiende en el nuevo esquema; false: solo el total de la red
+    ocupacion_inicial_max: 0.7   # el inventario inicial de la regla no supera este % de las posiciones del nodo
+  traslados: plantas_y_observados  # solo_plantas | plantas_y_observados | todos
+  traslado_ficticio_mismo_codigo: true   # planta y CEDI con el mismo código: movimiento contable sin costo ni tránsito
+  servicio:
+    lmax_h: null                 # tiempo máximo de entrega permitido (h). null = sin restricción
+    meta_h: 72                   # meta de tiempo de entrega para el indicador y la penalización
+    pen_hora: 0                  # COP por m3 por cada hora sobre la meta (0 = solo indicador)
+  holguras:                      # variables que hacen visible una infactibilidad en vez de esconderla
+    atraso: true
+    pen_atraso: 60000            # COP por m3 por día de atraso (pedido atendido tarde)
+    pen_no_atendido: 1500000     # COP por m3 no atendido al final del horizonte (venta perdida)
+    exceso: true
+    pen_exceso: 100000           # COP por m3 por día sobre la capacidad física (debe salir 0; si no, falta capacidad)
+    pen_stock_seguridad: 2000    # COP por m3 por día por debajo del stock de seguridad
+  costo_capital_dia: 0           # COP por m3 por día de inventario en cualquier nodo (costo financiero). 0 = no incluido
+  transporte:
+    f_terc: 1.0
+    f_prop: 1.0
+    f_dist: 1.0
+  costos_nodo:                   # [SUPUESTO] manejo por m3 y almacenaje por m3-día por modalidad
+    Propio: {manejo_salida: 4500, manejo_entrada: 0, almac_dia: 0}
+    "Operador logístico (3PL)": {manejo_salida: 5000, manejo_entrada: 3000, almac_dia: 0}
+
+# Escenarios: cada uno modifica los parámetros por defecto
+#   planta_cerrada: id o null | asignacion: libre / historica | bodegas: {id: fijo|opcional|forzado|cerrado}
+escenarios_diarios:
+  - id: S1_ACTUAL_OPT
+    nombre: "Actual optimizado (con la planta operando)"
+    planta_cerrada: null
+    bodegas: {CO99: forzado, BE_ANTIOQUIA: cerrado, BE_SABANA: cerrado}
+  - id: S2_SIN_PLANTA
+    nombre: "Sin planta (cierre con la red de atención actual)"
+    asignacion: historica
+    bodegas: {CO99: forzado, BE_ANTIOQUIA: cerrado, BE_SABANA: cerrado}
+  - id: S3_OPTIMIZADO
+    nombre: "Optimizado (cierre, el modelo decide)"
+    bodegas: {CO99: opcional, BE_ANTIOQUIA: opcional, BE_SABANA: opcional}
+  - id: S4_BE_OBLIGATORIA
+    nombre: "Uso obligatorio de bodegas externas"
+    bodegas: {CO99: forzado, BE_ANTIOQUIA: forzado, BE_SABANA: forzado}
+  - id: S5_SIN_BE
+    nombre: "Sin bodegas externas"
+    bodegas: {CO99: cerrado, BE_ANTIOQUIA: cerrado, BE_SABANA: cerrado}
+  - id: S6_DEMANDA_MAS20
+    nombre: "Optimizado con demanda +20 %"
+    crecimiento: 0.20
+    bodegas: {CO99: opcional, BE_ANTIOQUIA: opcional, BE_SABANA: opcional}
+  - id: S7_PARAMETRIZADO
+    nombre: "Parametrizado (editable en el HTML)"
+    bodegas: {CO99: opcional, BE_ANTIOQUIA: opcional, BE_SABANA: opcional}
+
+combinaciones_bodegas:            # evalúa todas las combinaciones abierto/cerrado de estas bodegas (escenario optimizado)
   activa: true
-  escenario_base: E3_OPTIMO
-  dias_inventario: [10, 15, 20, 25, 30, 35]
-  factor_flete: [0.9, 1.0, 1.1, 1.2]
+  bodegas: [CO99, BE_ANTIOQUIA, BE_SABANA]
 
 solver:
   tiempo_maximo_seg: 300

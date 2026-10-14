@@ -1,19 +1,22 @@
-# Modelo de optimización de red logística: cierre de planta y reubicación de producción
+# Modelo diario de optimización de red logística: cierre de planta y reubicación de producción
 
 Este modelo responde, con los datos de SAP, TMS y los maestros, a la pregunta:
 
-> Con el cierre de la planta **CO10 (Medellín)** y el traslado de su producción a otras plantas,
-> **¿es mejor usar una bodega externa o trasladar a un CEDI de otra ciudad que tenga capacidad?**
+> Con el cierre de la planta **CO10 (Medellín)** y el traslado de su producción a otras plantas, ¿cómo debe atenderse cada cliente
+> y cada referencia, día a día, al menor costo logístico sin perder servicio? En particular, **¿conviene una bodega externa o un traslado XI
+> a un CEDI de otra ciudad con capacidad?**
 
 Una sola ejecución hace todo esto:
 
-1. **Valida la calidad de los datos**: 52 validaciones sobre SAP, TMS y los 7 maestros.
-2. **Limpia y homologa la información.** Omite los fletes en 0 o 1 peso, normaliza el número de viaje para cruzar SAP con TMS, homologa las plantas del maestro de referencias y los clientes que en realidad son nodos.
-3. **Construye los parámetros**: demanda por ciudad, tarifas por ruta, capacidades y costos.
-4. **Optimiza** un modelo de programación lineal entera mixta (MILP) para 5 escenarios y corre una sensibilidad.
-5. **Genera los resultados**:
-   - `salidas/reporte_red_logistica.html`: tablero interactivo. Trae un **simulador** que vuelve a optimizar en el navegador cuando usted mueve los parámetros. Funciona sin internet.
-   - `salidas/resultados_red_logistica.xlsx`: resultados consolidados. Incluye la hoja **Simulador** con fórmulas vivas y tablas con filtros.
+1. **Valida la calidad de los datos**: 53 validaciones sobre SAP, TMS y los 7 maestros.
+2. **Limpia, homologa e imputa.** Omite los fletes en 0/1 COP de las tarifas y cruza SAP con TMS por viaje (SAP manda). A los XI de flota propia les imputa el flete: por viajes similares o por costo fijo + COP/km.
+3. **Construye la base diaria**: demanda por día, ciudad y producto (familia × planta), tarifas por tramo, tiempos de tránsito y capacidades en posiciones.
+4. **Reconstruye la operación actual** con los despachos y traslados observados.
+5. **Optimiza** un modelo MILP multiperiodo diario (HiGHS) para 7 escenarios y todas las combinaciones de bodegas externas.
+6. **Corre las pruebas de consistencia A–H**: balance, traslado ficticio, inventario acumulado, capacidad, bodegas, rutas, servicio y coherencia.
+7. **Genera los resultados**:
+   - `salidas/reporte_red_logistica.html`: tablero de 7 vistas. La **Simulación** vuelve a optimizar en el navegador con el mismo modelo y solver (HiGHS WebAssembly). Funciona sin internet.
+   - `salidas/resultados_red_logistica.xlsx`: resultados consolidados y la hoja **Validador_rutas** con fórmulas vivas.
 
 ---
 
@@ -37,22 +40,20 @@ modelo_red_logistica/
 ├── requirements.txt
 ├── README.md
 ├── .vscode/                    <- configuración para ejecutar con F5
-├── datos/
-│   ├── SAP.csv
-│   ├── TMS.csv
-│   ├── maestro_nodos.csv, maestro_referencias.csv, maestro_clientes.csv
-│   ├── info_cedi.csv, capacidad_plantas.csv, parametros_plantas.csv
-│   └── homologacion_centros.csv     (también sirve si quedan dentro de datos/Datos/)
+├── datos/                      <- SAP.csv, TMS.csv y maestros (también sirve datos/Datos/)
 ├── src/
 │   ├── carga_datos.py          lectura de los CSV
-│   ├── preparacion.py          limpieza, homologación, tarifas, demanda y capacidades
+│   ├── preparacion.py          limpieza, homologación, imputación de flota propia, tarifas
 │   ├── calidad_datos.py        validaciones de calidad
-│   ├── modelo_optimizacion.py  modelo MILP (HiGHS vía SciPy)
-│   ├── escenarios.py           escenarios, sensibilidad y modelo del simulador
-│   ├── resumen.py              recomendación y hallazgos automáticos
-│   ├── reporte_excel.py        Excel con simulador de fórmulas
-│   ├── reporte_html.py         tablero HTML
-│   └── recursos/               plantilla HTML, simulador JS y solver JS (sin internet)
+│   ├── modelo_optimizacion.py  tarifario (costos por tramo) y envoltura del solver HiGHS
+│   ├── base_modelo.py          base diaria común a Python y navegador
+│   ├── modelo_diario.py        modelo MILP multiperiodo y reconstrucción de la operación actual
+│   ├── escenarios_diarios.py   escenarios y combinaciones de bodegas externas
+│   ├── pruebas.py              pruebas de consistencia A–H
+│   ├── resumen.py, metodologia.py   textos del resumen y de la metodología
+│   ├── reporte_excel.py, reporte_html.py
+│   └── recursos/               plantilla HTML, motor.js (espejo del modelo), HiGHS WebAssembly, mapa base
+├── pruebas/                    paridad Python vs navegador (opcional, requiere Node.js)
 └── salidas/                    (se crea al ejecutar)
 ```
 
@@ -75,6 +76,7 @@ pip install -r requirements.txt
 
 Luego, en VS Code: `Ctrl+Shift+P` > **Python: Select Interpreter** > elija `.venv`.
 
+
 ### 5. Ejecute el modelo
 Puede hacerlo de cualquiera de estas formas:
 - **F5** (o `Ejecutar > Iniciar depuración`) y elija **"Ejecutar modelo de red"**.
@@ -84,79 +86,60 @@ Puede hacerlo de cualquiera de estas formas:
 Opciones disponibles:
 ```powershell
 python ejecutar_modelo.py --datos "D:\otra\ruta\Datos"   # leer los CSV de otra carpeta
-python ejecutar_modelo.py --sin-sensibilidad             # corrida más rápida
+python ejecutar_modelo.py --sin-pruebas                  # omite las pruebas A–H (~2 min menos)
+python ejecutar_modelo.py --sin-combinaciones            # omite las 9 combinaciones de bodegas
 python ejecutar_modelo.py --no-abrir                     # no abrir el HTML al terminar
 ```
-La corrida toma alrededor de 1 minuto: leer 1,9 millones de líneas de SAP es lo que más tarda. Desde la segunda vez usa caché y es más rápida.
-Al terminar se abre el HTML. Los resultados quedan en `salidas/`.
+La corrida completa toma de 4 a 6 minutos. Leer 1,9 millones de líneas de SAP solo pesa la primera vez, porque después usa caché.
 
 ### 6. Modifique escenarios
-Edite `parametros.yaml` y vuelva a ejecutar. Puede cambiar, entre otros:
-- `dias_inventario`: `auto` lo calibra con los datos; también puede poner un número, por ejemplo `15`.
-- `utilizacion_maxima`, `costos_por_modalidad` (manejo por m3 y costo por posición) y `nodos_opcionales_tobe`.
-- `bodegas_candidatas`: posiciones, costo fijo, tarifa por posición y manejo de cada bodega externa cotizada. Puede agregar más.
-- `escenarios`: agregue o quite escenarios. Cada uno define cómo se produce, si se cierra la planta, si hay bodegas candidatas y si se limitan los traslados.
-- `umbral_importe_invalido`, `periodo_base`, `percentil_outlier_tarifa` y `homologacion`.
+Edite `parametros.yaml` y vuelva a ejecutar. También puede simular directamente en el HTML (pestaña Simulación).
+- `horizonte`: ventana de demanda y número de días a optimizar.
+- `modelo`: proyección y crecimiento, producción (`plan` o `flexible`), inventario inicial y final, utilización, servicio (tiempo máximo, meta), penalizaciones, factores de tarifa y costos por modalidad.
+- `escenarios_diarios`: cada escenario define el modo de cada bodega externa (`fijo`, `opcional`, `forzado`, `cerrado`) y sus ajustes.
+- `bodegas_candidatas`: posiciones, costo fijo y costos variables de cada bodega cotizada.
 
 ---
 
-## Novedades (versión 2)
-- **Flete imputado a traslados XI de flota propia.** Son los viajes con todas sus líneas en 0 o 1 peso. Se imputa en `parametros.yaml > imputacion_xi` con dos métodos: `similares`, que usa la tarifa de terceros en la misma ruta o, si no hay, en la misma banda de distancia, y `km`, que usa costo fijo + COP/km ajustado con los viajes de terceros.
-- **Costos desagregados** en **transporte** (XI terceros, XI flota propia, distribución), **almacenamiento** (manejo, posiciones, fijo de bodegas externas) y **fijos de plantas/CEDI**.
-- **Nuevo escenario E5 "Cierre CO10 sin re-optimizar"**: mantiene la red de distribución actual y solo cambia la planta que produce.
-- **Waterfall** (puente de costos) entre dos escenarios cualesquiera.
-- **Mapa de flujos** que funciona sin internet, con 4 vistas por escenario:
-  1. planta → cliente;
-  2. CEDI → cliente;
-  3. traslados XI;
-  4. mercado N/E.
+## Qué hace el modelo (versión 3, diaria)
 
-  Niveles: cliente, ciudad, departamento y zona comercial. Filtros, comparación entre escenarios y descarga en CSV.
-- **Simulador ampliado** con 5 escenarios a la vez: Actual, A, B, Óptimo y Personalizado. Se pueden ajustar:
-  - cierre de CO10 y reparto de su producción;
-  - política de la bodega CO99, bodegas candidatas y límite de traslados;
-  - método y costo de la flota propia (COP/km, fijo por viaje), factores de terceros y de distribución;
-  - crecimiento por mercado y por zona, y tarifa por zona;
-  - capacidad y costos de cada almacén.
-
-## Qué hace el modelo
-
-### Reglas de negocio con los datos
-| Regla | Implementación |
+| Elemento | Implementación |
 |---|---|
-| SAP es la fuente principal | La demanda, las tarifas y los traslados salen de SAP. TMS solo complementa. |
-| Tipo **XI** = traslado entre nodos | El campo CEDI es el origen; el Cliente (C716 Rionegro, C718 Cajicá, C720 Tocancipá...) es el nodo destino. |
-| Fletes en 0 o 1 peso | Se omiten del cálculo de tarifas (numerador y denominador). Su volumen sí cuenta como demanda. |
-| Cruce SAP–TMS por viaje | SAP trae ceros a la izquierda (`0984938`). Al normalizarlos, el cruce pasa de 77,6 % a **96,2 %**. |
-| Complemento TMS | Origen real del traslado, tiempos de tránsito, m3 por viaje (para estimar viajes por mes) y población faltante en SAP. |
-| Planta TO-BE | Sale del maestro de referencias. Sus códigos (CO05, CO06, CO12...) se homologan a nodos SAP por volumen. |
-| Tarifas | COP/m3 por ruta observada. Las rutas sin historia se estiman con una regresión por distancia. |
-| Capacidad | Posiciones × m3 por posición (cajas por estiba × m3 por caja) × utilización máxima. |
+| Tiempo | Horizonte diario configurable (por defecto 28 días desde el 4-may-2026) |
+| Demanda | Despachos SAP no XI por día, ciudad y producto; réplica o perfil semanal + crecimientos por mercado, zona y familia |
+| Producción | Plan estable en días hábiles = demanda del horizonte × factor (supuesto), o flexible dentro de la capacidad de planta |
+| Inventario | Balance diario por nodo y producto: inicial + producción + llegadas (con tránsito) − salidas − despachos |
+| Inventario final | Cada nodo termina con la cobertura de la demanda que atiende (evita el efecto fin de horizonte) |
+| Capacidad | Posiciones × m3 por posición × utilización; exceso explícito y penalizado |
+| Bodegas externas | Binarias con costo fijo; combinaciones ninguna / A / B / ambas / el optimizador decide |
+| Traslado ficticio | Planta y CEDI del mismo código son el mismo nodo: costo 0, tránsito 0 |
+| Servicio | Tiempo máximo (excluye nodos), meta con penalización por hora, atraso y no atendido penalizados |
+| Solver | HiGHS (SciPy) en Python y HiGHS WebAssembly en el navegador; mismo modelo, paridad verificada |
 
-### Escenarios incluidos
+Formulación completa, supuestos y limitaciones: pestaña **Metodología** del HTML.
+
+## Escenarios incluidos
 | Id | Escenario |
 |---|---|
-| E0 | AS-IS optimizado (CO10 operando) |
-| E1 | **Opción B**: traslado a CEDI de otra ciudad, sin bodega externa |
-| E2 | **Opción A**: bodega externa. Se mantiene CO99 y puede abrir candidatas; los traslados a otros CEDI se limitan al nivel AS-IS. |
-| E3 | Óptimo TO-BE: el modelo combina libremente |
-| E4 | Óptimo TO-BE reasignando producción entre plantas compatibles |
-
-### Formulación
-Ver la pestaña **Metodología** del HTML o el encabezado de `src/modelo_optimizacion.py`.
-- **Objetivo**: minimizar fletes de traslado + fletes de distribución + manejo + posiciones + costos fijos + penalización por falta de capacidad.
-- **Restricciones**: demanda, balance en almacén, capacidad de almacenamiento (con abrir o cerrar bodegas), capacidad de planta y límite de traslados en la Opción A.
-
-### Interacción
-- **HTML > Simulador interactivo**: mueva los días de inventario, la utilización, los factores de flete y el crecimiento. También puede editar las posiciones y los costos de cada almacén. El navegador resuelve las tres opciones (A, B y Óptimo) en milisegundos y muestra la recomendación, el costo fijo de equilibrio de la bodega externa y la ocupación.
-- **Excel > Simulador**: las celdas amarillas son editables (días, volumen, planta origen, reparto por zona, costos y posiciones). Las fórmulas recalculan el costo de cada opción, revisan si cabe, arman el ranking y la decisión (bodega externa o traslado a CEDI) y actualizan la gráfica.
-- **Excel, resto de hojas**: tablas con filtros para escenarios, flujos, almacenes, calidad de datos, tarifas, tiempos TMS, homologaciones, demanda y parámetros.
+| S0 | Actual: operación observada (reconstruida, no optimizada) |
+| S1 | Actual optimizado (con la planta operando) |
+| S2 | Sin planta, con los CEDI históricos de cada cliente |
+| S3 | Optimizado: cierre, el modelo decide nodos y bodegas |
+| S4 | Uso obligatorio de bodegas externas |
+| S5 | Sin bodegas externas |
+| S6 | Optimizado con demanda +20 % |
+| S7 | Parametrizado (base editable para la simulación) |
 
 ## Supuestos que debe validar
 Los valores marcados `[SUPUESTO]` en `parametros.yaml` no vienen en los datos:
-- Costos variables de manejo por modalidad.
-- Costos de las bodegas externas candidatas.
-- Utilización máxima: `info_cedi` trae vacío `Utilizacion_Max_Operable_Pct`.
-- Días de inventario: se calibran asumiendo que Cajicá está lleno, porque hoy desborda a CO99.
+- **Plan de producción diario** e **inventario inicial** por nodo.
+- Costos de las bodegas externas candidatas y costos de manejo por modalidad.
+- Penalizaciones: atraso, no atendido, exceso de capacidad y stock de seguridad.
+- Tiempos de servicio: el maestro de clientes no trae lead times.
+- Tarifas de distribución en rutas sin historial: se estiman por distancia.
 
-El modelo no incluye costos de producción por planta ni restricciones de nivel de servicio: los campos de lead time del maestro de clientes están vacíos.
+## Prueba de paridad (opcional)
+```powershell
+python pruebas/exportar_paridad.py
+node pruebas/paridad.js
+```

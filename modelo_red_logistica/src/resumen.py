@@ -1,123 +1,100 @@
-"""Construye la recomendación, los hallazgos y los valores base del simulador a partir de los resultados."""
+"""Recomendación y hallazgos del resumen ejecutivo, calculados a partir de los resultados del modelo diario."""
 from __future__ import annotations
 
-import pandas as pd
-
-from .preparacion import Preparado
+from collections import defaultdict
 
 
-def _m(v):  # millones de COP
-    return f"{v / 1e6:,.0f} MCOP".replace(",", ".")
+def _m(v):  # millones de COP por mes
+    return f"{v / 1e6:,.0f}".replace(",", ".") + " MCOP"
 
 
 def _n(v, dec=0):
     return f"{v:,.{dec}f}".replace(",", "X").replace(".", ",").replace("X", ".")
 
 
-def base_simulador(prep: Preparado, cfg: dict, sim: dict) -> dict:
-    cerrada = cfg["produccion"]["planta_cerrada"]
-    dem = prep.demanda[~prep.demanda.descontinuada]
-    mov = dem[(dem.planta_asis == cerrada) & (dem.planta_tobe != cerrada)]
-    planta = mov.groupby("planta_tobe").vol_mes.sum().idxmax() if len(mov) else sim["plantas"][0]
-    mv = mov[mov.planta_tobe == planta]
-    reparto = (mv.groupby("zona").vol_mes.sum() / mv.vol_mes.sum()).to_dict() if len(mv) else {}
-    base = prep.sap[prep.sap.en_base & ~prep.sap.es_xi & (prep.sap.planta_asis != cerrada) & ~prep.sap.descontinuada]
-    ocup = (base.groupby("CEDI").vol.sum() / prep.meses_base).to_dict()
-    xi = prep.xi_asis.dropna(subset=["destino"])
-    for n in sim["almacenes"]:
-        if n["id"] == cerrada:
-            continue
-        if n["tipo"] == "bodega_externa_actual" and ocup.get(n["id"], 0) == 0:
-            ocup[n["id"]] = float(xi[(xi.destino == n["id"]) & (xi.origen != n["id"])].vol_mes.sum())
-    return {"doi": sim["defaults"]["dias_inventario"], "util": sim["defaults"]["utilizacion_maxima"], "planta": planta,
-            "volumen": float(mv.vol_mes.sum()), "reparto": {r: float(reparto.get(r, 0.0)) for r in sim["regiones"]},
-            "ocupacion_base": {k: float(v) for k, v in ocup.items()}}
+def _mes(r, k):
+    return r["costos"].get(k, 0.0) * 30 / r["H"]
 
 
-def construir_resumen(prep: Preparado, cfg: dict, res: dict, sens: pd.DataFrame, calidad: pd.DataFrame,
-                      equilibrio: dict, sim: dict) -> dict:
-    cerrada = cfg["produccion"]["planta_cerrada"]
-    B, A, O = res.get("E1_TRASLADO_CEDI"), res.get("E2_BODEGA_EXTERNA"), res.get("E3_OPTIMO")
-    E0, E4 = res.get("E0_ASIS_OPT"), res.get("E4_OPTIMO_FLEX")
-    doi = O["params"]["dias_inventario"] if O else cfg["almacenamiento"]["dias_inventario_efectivo"]
-    rec = []
-    if A and B:
-        ta, tb = A["costos"]["Total"], B["costos"]["Total"]
-        mejor, peor = ("traslado a CEDI de otra ciudad (Opción B)", "bodega externa (Opción A)") if tb <= ta else \
-            ("bodega externa (Opción A)", "traslado a CEDI de otra ciudad (Opción B)")
-        rec.append(f"Con {_n(doi, 1)} días de inventario, la alternativa de menor costo es {mejor}: "
-                   f"{_m(min(ta, tb))}/mes frente a {_m(max(ta, tb))}/mes de {peor}; diferencia {_m(abs(ta - tb))}/mes "
-                   f"({_m(abs(ta - tb) * 12)}/año).")
-        if equilibrio:
-            fm = equilibrio["fijo_maximo_bodega_para_empatar"]
-            if fm <= 0:
-                rec.append(f"Aun con costo fijo cero, la bodega externa quedaría {_m(-fm)}/mes por encima del traslado: "
-                           "limitar los traslados y manejar el producto en un nodo adicional cuesta más que llevarlo a un "
-                           "CEDI con espacio.")
-            else:
-                rec.append(f"La bodega externa sería competitiva solo si su costo fijo mensual fuera menor a {_m(fm)} "
-                           f"(hoy {_m(equilibrio['fijo_bodega_actual'])}).")
+def _principal_por_ciudad(base, r):
+    acc = defaultdict(lambda: defaultdict(float))
+    if r.get("tipo") == "historico":
+        for a in r.get("asignacion_grupos", []):
+            acc[base["grupos"][a[2]][0]][a[0]] += a[4]
+    else:
+        for a in r.get("asignacion", []):
+            if not a[8]:
+                acc[a[1]][a[0]] += a[4]
+    return {z: max(d, key=d.get) for z, d in acc.items()}, {z: sum(d.values()) for z, d in acc.items()}
+
+
+def construir_resumen(base: dict, cfg: dict, corrida: dict, combos: list, pruebas: list, info: dict) -> dict:
+    R = corrida["resultados"]
+    cerrada = base["meta"]["planta_cerrada"]
+    A, S2, O, S4, S1 = R.get("S0_ACTUAL"), R.get("S2_SIN_PLANTA"), R.get("S3_OPTIMIZADO"), R.get("S4_BE_OBLIGATORIA"), R.get("S1_ACTUAL_OPT")
+    log = "Costo logístico (sin penalizaciones)"
+    rec, hall = [], []
+    if O and A:
+        d = _mes(A, log) - _mes(O, log)
+        rec.append(f"Con {cerrada} cerrada y la red re-optimizada, el costo logístico es {_m(_mes(O, log))}/mes frente a {_m(_mes(A, log))}/mes de la operación "
+                   f"actual observada: {'ahorro' if d > 0 else 'sobrecosto'} de {_m(abs(d))}/mes ({_m(abs(d) * 12)}/año), incluido el costo fijo de {cerrada} que desaparece.")
+    if combos:
+        reales = [c for c in combos if c["combinacion"] != "El optimizador decide"]
+        mejor = min(reales, key=lambda c: c["total_mes"])
+        otras = sorted([c for c in reales if c is not mejor], key=lambda c: c["total_mes"])
+        rec.append(f"Bodega externa vs traslado a CEDI: la combinación de menor costo es «{mejor['combinacion']}» ({_m(mejor['total_mes'])}/mes). "
+                   + (f"La siguiente, «{otras[0]['combinacion']}», cuesta {_m(otras[0]['vs_mejor_mes'])}/mes más. " if otras else "")
+                   + ("Ninguna bodega externa ahorra transporte ni manejo suficiente para pagar su costo fijo: los CEDI con espacio absorben el volumen."
+                      if mejor["bodegas_abiertas"] in ("-", "") else f"Se justifica abrir {mejor['bodegas_abiertas']}."))
+    if S2 and O:
+        rec.append(f"Cerrar {cerrada} manteniendo los CEDI históricos de cada cliente cuesta {_m(_mes(S2, log))}/mes: {_m(_mes(S2, log) - _mes(O, log))}/mes más que re-optimizar. "
+                   "Ese es el valor de rediseñar desde qué nodo se atiende cada cliente.")
+    if S4 and O:
+        rec.append(f"Obligar el uso de bodegas externas cuesta {_m(_mes(S4, log) - _mes(O, log))}/mes adicionales frente al óptimo.")
     if O:
-        ab = O["kpis"]["bodegas_abiertas"]
-        rec.append("El óptimo libre " + (f"abre/mantiene: {', '.join(ab)}." if ab else
-                                         "no usa bodegas externas: absorbe el volumen con el CEDI de la planta y "
-                                         "CEDIs con capacidad libre, cerrando la bodega externa actual.")
-                   + f" Costo {_m(O['costos']['Total'])}/mes.")
-    if E0 and O:
-        d = O["costos"]["Total"] - E0["costos"]["Total"]
-        rec.append(f"Frente a la red AS-IS optimizada con {cerrada} operando ({_m(E0['costos']['Total'])}/mes), el TO-BE "
-                   f"{'ahorra' if d < 0 else 'cuesta'} {_m(abs(d))}/mes, incluyendo el costo fijo de {cerrada} que desaparece.")
-    if E4 and O:
-        d = O["costos"]["Total"] - E4["costos"]["Total"]
-        if d > 0:
-            rec.append(f"Reasignar producción entre plantas con familias compatibles ahorraría {_m(d)}/mes adicionales "
-                       f"(validar capacidades: capacidad_plantas muestra filas idénticas para CO02 y CO04).")
-    if len(sens):
-        sd = sens[sens.variable == "dias_inventario"].pivot_table(index="valor", columns="escenario", values="costo_total_cop")
-        if {"E1_TRASLADO_CEDI", "E2_BODEGA_EXTERNA"} <= set(sd.columns):
-            gana_a = sd[sd["E2_BODEGA_EXTERNA"] < sd["E1_TRASLADO_CEDI"]]
-            if len(gana_a):
-                rec.append(f"Sensibilidad: la bodega externa pasa a ser mejor desde ~{_n(gana_a.index.min())} días de inventario.")
-            else:
-                rec.append(f"Sensibilidad: en todo el rango evaluado ({_n(sd.index.min())}-{_n(sd.index.max())} días) "
-                           f"el traslado a CEDI sigue siendo más económico que la bodega externa.")
+        pen = _mes(O, "Total penalizaciones")
+        comp = {k: _mes(O, k) for k in O["costos"] if k.startswith("Penalización") and _mes(O, k) > 1e6}
+        rec.append(f"Servicio del escenario optimizado: {O['kpis']['fill_rate']:.1%} de la demanda atendida, {O['kpis']['pct_en_meta']:.0%} del volumen dentro de la meta de "
+                   f"{cfg['modelo']['servicio'].get('meta_h')} h" +
+                   (f"; penalizaciones {_m(pen)}/mes (" + ", ".join(f"{k.replace('Penalización ', '')} {_m(v)}" for k, v in comp.items()) +
+                    "): son precios de incumplimiento, no costos contables." if pen > 1e6 else "; sin penalizaciones relevantes."))
+    rec.append("Las cifras dependen de supuestos que no están en los datos (plan de producción, inventario inicial, tarifas de bodegas candidatas): "
+               "valídelos en Simulación antes de decidir.")
 
-    hall = []
-    info = prep.info
-    inval = calidad[calidad["Validación"].str.startswith("IMPORTE SAP <=")]
-    if len(inval):
-        hall.append(f"{inval['% afectado'].iat[0]:.0%} de las líneas SAP tienen flete en 0/1 peso: se excluyeron de las tarifas "
-                    f"(solo {_n(prep.sap.flete_valido.sum())} líneas válidas).")
-    hall.append(f"El cruce SAP-TMS por viaje sube de {_n(info['viajes_match_crudo'])} a {_n(info['viajes_match_normalizado'])} "
-                f"viajes ({info['viajes_match_normalizado'] / info['viajes_sap']:.1%}) al quitar ceros a la izquierda del viaje en SAP.")
-    hall.append("El maestro de referencias usa códigos de planta que no existen en la homologación (CO05, CO06, CO12, ...): "
-                "se homologaron por volumen SAP (ej. CO06->CO01 Cajicá, CO12->CO02 Rionegro).")
-    pl = prep.plantas
-    if "CO01" in pl.index:
-        hall.append(f"Con el traslado de referencias, CO01 pasa de {pl.at['CO01', 'util_asis']:.0%} a {pl.at['CO01', 'util_tobe']:.0%} "
-                    f"de su capacidad de producción ({_n(pl.at['CO01', 'produccion_tobe_m3_mes'])} m3/mes).")
-    hall.append(f"Días de inventario implícitos en Cajicá (CEDI lleno + uso de bodega externa CO99): {_n(info['doi_implicito'], 1)} días; "
-                f"m3 por posición de estiba según maestro: {_n(prep.m3_por_posicion, 2)}.")
-    if B:
-        rn = B["nodos"].set_index("almacen")
-        libres = rn[rn.utilizacion < 0.6].sort_values("utilizacion")
-        if len(libres):
-            hall.append("CEDIs con capacidad libre en TO-BE: " + ", ".join(f"{i} ({r.utilizacion:.0%})" for i, r in libres.head(4).iterrows()) + ".")
-    if E0 and O:
-        hall.append(f"Traslados entre nodos: {_n(E0['kpis']['traslados_m3_mes'])} m3/mes AS-IS optimizado vs "
-                    f"{_n(O['kpis']['traslados_m3_mes'])} m3/mes en el óptimo TO-BE (~{_n(O['kpis']['viajes_traslado_mes'])} viajes/mes).")
-    ar = res["ASIS_REAL"]
-    imp = info["imputacion_xi"]
-    hall.append(f"Traslados XI de flota propia (viajes con flete en 0/1 peso): {_n(imp['viajes_propia_base'])} viajes en el periodo base, "
-                f"{_n(imp['vol_propia_mes'])} m3/mes ({imp['vol_propia_mes'] / (imp['vol_propia_mes'] + imp['vol_tercero_mes']):.0%} del XI). "
-                f"Flete imputado: {_m(imp['imp_similar_mes'])}/mes por viajes similares o {_m(imp['imp_km_mes'])}/mes por km "
-                f"({_n(imp['costo_fijo_viaje_cop'])} COP fijo + {_n(imp['costo_km_cop'])} COP/km); se usa '{imp['metodo']}'.")
-    hall.append(f"Costo actual real: transporte {_m(ar['costos']['Total transporte'])}/mes, almacenamiento {_m(ar['costos']['Total almacenamiento'])}/mes "
-                f"y fijos de plantas/CEDI {_m(ar['costos']['Total fijo nodos'])}/mes. Flete registrado en SAP: "
-                f"{_m(ar['kpis']['flete_registrado_sap_cop_mes'])}/mes + XI imputado {_m(ar['kpis']['flete_xi_imputado_cop_mes'])}/mes.")
-    E5 = res.get("E5_CIERRE_RED_ACTUAL")
-    if E5 and O:
-        hall.append(f"Si se cierra {cerrada} sin re-optimizar la red ({_m(E5['costos']['Total'])}/mes), el costo es "
-                    f"{_m(E5['costos']['Total'] - O['costos']['Total'])}/mes mayor que el óptimo TO-BE: ese es el valor de rediseñar la red.")
-    return {"recomendacion": " ".join(rec), "recomendacion_lista": rec, "hallazgos": hall,
-            "base_simulador": base_simulador(prep, cfg, sim)}
+    if A:
+        hall.append(f"Operación actual (horizonte {A['H']} días): {_n(A['kpis']['demanda_m3'] / A['H'])} m3/día despachados, transporte {_m(_mes(A, 'Total transporte'))}/mes "
+                    f"(XI terceros {_m(_mes(A, 'Traslado XI terceros'))}, XI flota propia {_m(_mes(A, 'Traslado XI flota propia'))}, distribución {_m(_mes(A, 'Distribución'))}), "
+                    f"almacenamiento {_m(_mes(A, 'Total almacenamiento'))}/mes.")
+        exc = [(n, max(d["exceso"])) for n, d in A["nodos_dia"].items() if max(d["exceso"]) > 0.5]
+        if exc:
+            hall.append("Con la operación observada, superan su capacidad estimada: " + ", ".join(f"{n} (máx. {_n(v)} m3)" for n, v in exc) + ".")
+    if A and O:
+        pa, va = _principal_por_ciudad(base, A)
+        po, _ = _principal_por_ciudad(base, O)
+        camb = [z for z in pa if z in po and pa[z] != po[z]]
+        vol = sum(va[z] for z in camb)
+        hall.append(f"{len(camb)} de {len(pa)} ciudades cambian de CEDI principal en el optimizado ({vol / max(sum(va.values()), 1):.0%} del volumen). "
+                    "Detalle por cliente en Escenarios › ¿Cómo cambia la atención de los clientes?")
+        if base.get("obs_out"):
+            tot = obs = 0.0
+            for a in O.get("asignacion", []):
+                if not a[8]:
+                    tot += a[4]
+                    obs += a[4] * base["obs_out"][a[0]][a[1]]
+            if tot:
+                hall.append(f"{1 - obs / tot:.0%} del volumen del optimizado usa tarifas de distribución estimadas por distancia (rutas nodo→ciudad sin historial en SAP), "
+                            "frente a menos del 1 % en la operación actual. Conviene cotizar esas rutas antes de implementar.")
+        hall.append(f"Traslados XI: {_n(A['kpis']['traslados_m3'] / A['H'])} m3/día en la operación actual vs {_n(O['kpis']['traslados_m3'] / O['H'])} m3/día en el optimizado.")
+        ocm = max((max(d["ocupacion"]), n) for n, d in O["nodos_dia"].items() if d["pos_m3"] > 0)
+        hall.append(f"Ocupación máxima en el optimizado: {ocm[1]} con {ocm[0]:.0%} de sus posiciones (límite de utilización {cfg['modelo']['utilizacion_maxima']:.0%}).")
+    if S1 and O:
+        hall.append(f"Con {cerrada} operando pero la red optimizada, el costo sería {_m(_mes(S1, log))}/mes: la diferencia con el optimizado sin planta "
+                    f"({_m(_mes(S1, log) - _mes(O, log))}/mes) es el efecto del cierre una vez descontada la mejora de red.")
+    imp = info.get("imputacion_xi") or {}
+    if imp:
+        hall.append(f"Traslados XI de flota propia (flete 0/1 COP): {_n(imp.get('viajes_propia_base', 0))} viajes en el periodo base; flete imputado "
+                    f"{_m(imp.get('imp_similar_mes', 0))}/mes por viajes similares o {_m(imp.get('imp_km_mes', 0))}/mes por km "
+                    f"({_n(imp.get('costo_fijo_viaje_cop', 0))} COP fijo + {_n(imp.get('costo_km_cop', 0))} COP/km). Método usado: {imp.get('metodo')}.")
+    ok = sum(p["estado"] == "OK" for p in pruebas)
+    hall.append(f"Pruebas de consistencia A–H: {ok} de {len(pruebas)} correctas (ver Metodología).")
+    return {"reco": rec, "hallazgos": hall}

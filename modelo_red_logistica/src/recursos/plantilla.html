@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Red Logística TO-BE</title>
+<title>Red Logística: Decisiones</title>
 <style>
 :root{
   color-scheme: light;
@@ -12,6 +12,7 @@
   --s1:#2a78d6; --s2:#eb6834; --s3:#1baf7a; --s4:#eda100; --s5:#e87ba4; --s6:#008300; --s7:#6250d6; --s8:#e34948;
   --good:#0ca30c; --good-ink:#006300; --warn:#fab219; --serious:#ec835a; --crit:#d03b3b;
   --input:#fff7d1; --land:#f0efec; --ocean:#e4eef9;
+  --t-hist:#2a78d6; --t-est:#eda100; --t-sup:#898781; --t-opt:#1baf7a; --t-sim:#6250d6;
 }
 @media (prefers-color-scheme: dark){
   :root:not([data-theme="light"]){
@@ -20,6 +21,7 @@
     --grid:#2c2c2a; --axis:#383835; --border:rgba(255,255,255,.10); --accent:#86b6ef; --accent-soft:#184f95;
     --s1:#3987e5; --s2:#d95926; --s3:#199e70; --s4:#c98500; --s5:#d55181; --s6:#008300; --s7:#9085e9; --s8:#e66767;
     --good-ink:#0ca30c; --input:#3a3420; --land:#262624; --ocean:#141c26;
+    --t-hist:#3987e5; --t-est:#c98500; --t-opt:#199e70; --t-sim:#9085e9;
   }
 }
 :root[data-theme="dark"]{
@@ -28,42 +30,48 @@
   --grid:#2c2c2a; --axis:#383835; --border:rgba(255,255,255,.10); --accent:#86b6ef; --accent-soft:#184f95;
   --s1:#3987e5; --s2:#d95926; --s3:#199e70; --s4:#c98500; --s5:#d55181; --s6:#008300; --s7:#9085e9; --s8:#e66767;
   --good-ink:#0ca30c; --input:#3a3420; --land:#262624; --ocean:#141c26;
+  --t-hist:#3987e5; --t-est:#c98500; --t-opt:#199e70; --t-sim:#9085e9;
 }
 *{box-sizing:border-box}
 html,body{margin:0;background:var(--bg);color:var(--ink);font-family:system-ui,-apple-system,"Segoe UI",sans-serif;font-size:15px;line-height:1.5}
-header{padding:20px 24px 0;max-width:1400px;margin:0 auto}
+header{padding:20px 24px 0;max-width:1440px;margin:0 auto}
 header h1{font-size:22px;margin:0 0 4px}
 header p{margin:0;color:var(--ink2)}
 .toolbar{display:flex;gap:8px;align-items:center;justify-content:space-between;flex-wrap:wrap}
 nav{position:sticky;top:0;z-index:5;background:var(--bg);border-bottom:1px solid var(--border)}
-nav .in{max-width:1400px;margin:0 auto;padding:8px 24px;display:flex;gap:4px;flex-wrap:wrap}
+nav .in{max-width:1440px;margin:0 auto;padding:8px 24px;display:flex;gap:4px;flex-wrap:wrap;align-items:center}
 nav button{border:0;background:transparent;color:var(--ink2);padding:8px 14px;border-radius:8px;font:inherit;cursor:pointer}
 nav button:hover{background:var(--surface2)}
 nav button[aria-selected="true"]{background:var(--accent-soft);color:var(--ink);font-weight:600}
-main{max-width:1400px;margin:0 auto;padding:16px 24px 48px}
+nav button.chico{font-size:13px;margin-left:auto;color:var(--muted)}
+main{max-width:1440px;margin:0 auto;padding:16px 24px 48px}
 section.tab{display:none}
 section.tab.on{display:block}
 h2{font-size:18px;margin:24px 0 8px}
 h3{font-size:15px;margin:0 0 8px}
+h4{font-size:14px;margin:14px 0 6px}
 .card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px;margin:12px 0}
 .grid{display:grid;gap:12px}
 .g2{grid-template-columns:repeat(auto-fit,minmax(440px,1fr))}
-.g3{grid-template-columns:repeat(auto-fit,minmax(300px,1fr))}
-.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin:12px 0}
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:12px;margin:12px 0}
 .tile{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px 16px}
 .tile .lab{color:var(--ink2);font-size:13px}
-.tile .val{font-size:26px;font-weight:650;margin-top:2px}
+.tile .val{font-size:24px;font-weight:650;margin-top:2px}
 .tile .sub{color:var(--muted);font-size:12.5px}
 .tile .split{display:flex;gap:10px;flex-wrap:wrap;margin-top:6px;font-size:12.5px;color:var(--ink2)}
 .tile .split b{color:var(--ink);font-weight:600}
 .tile.best{outline:2px solid var(--good);outline-offset:-1px}
-.badge{display:inline-flex;align-items:center;gap:4px;font-size:12px;padding:1px 8px;border-radius:999px;border:1px solid var(--border);color:var(--ink2);background:var(--surface2)}
+.badge{display:inline-flex;align-items:center;gap:4px;font-size:11.5px;padding:1px 8px;border-radius:999px;border:1px solid var(--border);color:var(--ink2);background:var(--surface2);white-space:nowrap}
 .badge.ok::before{content:"✓";color:var(--good-ink);font-weight:700}
+.tipo{display:inline-flex;align-items:center;gap:5px;font-size:11.5px;font-weight:600;color:var(--ink2);white-space:nowrap}
+.tipo i{width:9px;height:9px;border-radius:2px;display:inline-block}
+.tipo.historico i{background:var(--t-hist)} .tipo.estimado i{background:var(--t-est)} .tipo.supuesto i{background:var(--t-sup)}
+.tipo.optimizado i{background:var(--t-opt)} .tipo.simulado i{background:var(--t-sim)}
 .sev{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;font-weight:600;white-space:nowrap}
 .sev i{width:10px;height:10px;border-radius:50%;display:inline-block}
-.sev.Alta i{background:var(--crit)} .sev.Media i{background:var(--warn)} .sev.Baja i{background:var(--muted)} .sev.OK i{background:var(--good)}
-.sev.Alta::after{content:"▲"} .sev.Media::after{content:"●"} .sev.Baja::after{content:"–"} .sev.OK::after{content:"✓"}
-.sev::after{font-size:10px;color:var(--ink2)}
+.sev.Alta i,.sev.Capacidad i,.sev.Infactible i{background:var(--crit)} .sev.Media i,.sev.Servicio i,.sev.Producción i{background:var(--warn)}
+.sev.Baja i,.sev.Dato i{background:var(--muted)} .sev.OK i{background:var(--good)} .sev.Restricción i{background:var(--serious)}
+.sev.Revisar i{background:var(--crit)}
 ul.lista{margin:0;padding-left:20px} ul.lista li{margin:4px 0}
 .reco{border-left:4px solid var(--accent)}
 .reco li{margin:6px 0}
@@ -72,803 +80,723 @@ th,td{text-align:left;padding:6px 8px;border-bottom:1px solid var(--grid);vertic
 th{color:var(--ink2);font-weight:600;position:sticky;top:0;background:var(--surface);cursor:pointer;user-select:none;z-index:1}
 td.n,th.n{text-align:right;font-variant-numeric:tabular-nums}
 tfoot td{font-weight:650;border-top:2px solid var(--axis)}
+tr.ref td{background:var(--accent-soft)}
+tr.nof td{color:var(--muted)}
 .tabla-wrap{max-height:460px;overflow:auto;border:1px solid var(--border);border-radius:8px}
-.filtros{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin:8px 0}
+.filtros{display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;margin:8px 0}
 .filtros label{font-size:13px;color:var(--ink2);display:flex;flex-direction:column;gap:2px}
-select,input[type=text],input[type=number]{font:inherit;color:var(--ink);background:var(--surface);border:1px solid var(--axis);border-radius:8px;padding:6px 8px}
+select,input[type=text],input[type=number],input[type=date]{font:inherit;color:var(--ink);background:var(--surface);border:1px solid var(--axis);border-radius:8px;padding:6px 8px}
 input[type=number]{width:120px;background:var(--input)}
-input.chico{width:80px}
-.ctrl{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px}
-.ctrl label{display:block;font-size:13px;color:var(--ink2)}
-.ctrl output{font-weight:650;color:var(--ink);font-variant-numeric:tabular-nums}
-.ctrl .chk{display:flex;gap:8px;align-items:center;font-size:14px;color:var(--ink)}
-input[type=range]{width:100%;accent-color:var(--accent)}
+input.chico{width:86px}
+.form{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px 16px}
+.form label{display:flex;flex-direction:column;gap:3px;font-size:13px;color:var(--ink2)}
+.form .chk{flex-direction:row;align-items:center;gap:8px;color:var(--ink)}
+.form small{color:var(--muted);font-size:11.5px}
 details.sec{background:var(--surface);border:1px solid var(--border);border-radius:12px;margin:10px 0;padding:0 16px}
 details.sec[open]{padding-bottom:16px}
 details.sec summary{cursor:pointer;padding:12px 0;font-weight:600;list-style:none;display:flex;justify-content:space-between}
 details.sec summary::after{content:"▾";color:var(--muted)}
 details.sec[open] summary::after{content:"▴"}
-details.sec .nota{margin:0 0 10px}
 button.btn{font:inherit;border:1px solid var(--axis);background:var(--surface);color:var(--ink);padding:7px 14px;border-radius:8px;cursor:pointer}
 button.btn.pri{background:var(--accent);color:var(--surface);border-color:var(--accent)}
+button.btn:disabled{opacity:.5;cursor:wait}
 .chart{width:100%;min-height:360px}
-.mapa{width:100%;height:640px}
+.mapa{width:100%;height:620px}
 .nota{color:var(--muted);font-size:12.5px}
-.seg{display:inline-flex;border:1px solid var(--axis);border-radius:8px;overflow:hidden;flex-wrap:wrap}
-.seg button{border:0;background:transparent;color:var(--ink2);padding:6px 12px;font:inherit;cursor:pointer}
-.seg button[aria-pressed="true"]{background:var(--accent-soft);color:var(--ink);font-weight:600}
-.formula{background:var(--surface2);border-radius:8px;padding:12px 14px;white-space:pre-wrap;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13px;overflow-x:auto}
+.checks{display:flex;flex-wrap:wrap;gap:6px 16px}
+.checks label{display:flex;align-items:center;gap:6px;font-size:13.5px}
+.formula{background:var(--surface2);border-radius:8px;padding:12px 14px;white-space:pre-wrap;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13px;overflow-x:auto;line-height:1.6}
 .leyenda{display:flex;flex-wrap:wrap;gap:12px;font-size:12.5px;color:var(--ink2);margin:6px 0}
 .leyenda span{display:inline-flex;align-items:center;gap:6px}
 .leyenda i{width:12px;height:12px;border-radius:3px;display:inline-block}
-.sticky-res{position:sticky;top:52px;z-index:3;background:var(--bg);padding:4px 0}
-@media (max-width:640px){header,main,nav .in{padding-left:16px;padding-right:16px}.g2,.g3{grid-template-columns:1fr}.tile .val{font-size:22px}.mapa{height:460px}}
+.estado{font-size:13px;color:var(--ink2);margin-left:6px}
+.met p{max-width:980px}
+.met table td:first-child{white-space:nowrap;font-family:ui-monospace,Menlo,Consolas,monospace}
+@media (max-width:640px){header,main,nav .in{padding-left:16px;padding-right:16px}.g2{grid-template-columns:1fr}.tile .val{font-size:21px}.mapa{height:440px}}
 @media print{nav,.toolbar button{display:none}section.tab{display:block}}
 </style>
 </head>
 <body>
 <header>
   <div class="toolbar">
-    <div><h1 id="titulo">Modelo de optimización de red logística</h1><p id="subtitulo"></p></div>
+    <div><h1 id="titulo">Red logística</h1><p id="subtitulo"></p></div>
     <button class="btn" id="tema" title="Cambiar tema claro/oscuro">◐ Tema</button>
+  </div>
+  <div class="leyenda" style="margin-top:8px">
+    <span class="tipo historico"><i></i>Histórico observado</span><span class="tipo estimado"><i></i>Estimado / reconstruido</span>
+    <span class="tipo supuesto"><i></i>Supuesto parametrizable</span><span class="tipo optimizado"><i></i>Optimizado (Python, HiGHS)</span>
+    <span class="tipo simulado"><i></i>Simulado en el navegador (HiGHS WebAssembly)</span>
   </div>
 </header>
 <nav><div class="in" role="tablist" id="tabs">
-  <button role="tab" data-tab="resumen" aria-selected="true">Resumen</button>
-  <button role="tab" data-tab="calidad">Calidad de datos</button>
-  <button role="tab" data-tab="diagnostico">Diagnóstico actual</button>
-  <button role="tab" data-tab="resultados">Escenarios y comparación</button>
-  <button role="tab" data-tab="mapa">Mapa de flujos</button>
-  <button role="tab" data-tab="simulador">Simulador</button>
-  <button role="tab" data-tab="metodologia">Metodología</button>
+  <button role="tab" data-tab="resumen" aria-selected="true">1 · Resumen ejecutivo</button>
+  <button role="tab" data-tab="diag">2 · Diagnóstico actual</button>
+  <button role="tab" data-tab="sim">3 · Simulación</button>
+  <button role="tab" data-tab="esc">4 · Escenarios y comparación</button>
+  <button role="tab" data-tab="mapa">5 · Mapa de flujos</button>
+  <button role="tab" data-tab="val">6 · Validador de rutas</button>
+  <button role="tab" data-tab="met" class="chico">Metodología</button>
 </div></nav>
 <main>
-<!-- ============================== RESUMEN -->
+<!-- ======================================================== 1 RESUMEN -->
 <section class="tab on" id="t-resumen">
-  <div class="card reco"><h3>Recomendación</h3><ul class="lista" id="reco"></ul></div>
-  <div class="tiles" id="tiles-resumen"></div>
-  <div class="card"><h3>Puente de costos: <span id="wf-res-tit"></span></h3><div id="ch-wf-res" class="chart" style="min-height:400px"></div>
-    <p class="nota">Barras verdes = ahorro, rojas = mayor costo. Cambie los escenarios comparados en la pestaña «Escenarios y comparación».</p></div>
+  <div class="card reco"><h3>Recomendación del modelo</h3><ul class="lista" id="r-reco"></ul></div>
+  <div class="tiles" id="r-tiles"></div>
   <div class="grid g2">
-    <div class="card"><h3>Transporte vs almacenamiento vs fijos (millones COP/mes)</h3><div id="ch-grupos" class="chart" style="min-height:420px"></div></div>
-    <div class="card"><h3>Detalle por componente (millones COP/mes)</h3><div id="ch-costos" class="chart" style="min-height:420px"></div></div>
+    <div class="card"><h3>¿De dónde sale la diferencia? <span id="r-wf-tit" class="nota"></span></h3><div id="r-wf" class="chart" style="min-height:400px"></div>
+      <p class="nota">Costos mensuales equivalentes (horizonte × 30 / días). Verde = ahorro; rojo = mayor costo. Las penalizaciones no son costos reales: miden incumplimientos.</p></div>
+    <div class="card"><h3>Bodegas externas: todas las combinaciones evaluadas</h3><div id="r-combos" class="chart" style="min-height:400px"></div>
+      <p class="nota">Cada barra es una optimización completa con esa combinación de bodegas abiertas (forzadas) o cerradas.</p></div>
   </div>
-  <div class="card"><h3>Hallazgos clave</h3><ul class="lista" id="hallazgos"></ul></div>
+  <div class="card"><h3>Red completa día a día en el escenario optimizado (m3)</h3><div id="r-dia" class="chart" style="min-height:360px"></div>
+    <p class="nota">Producción estable (supuesto parametrizable) frente a una demanda que fluctúa: el inventario absorbe la diferencia.</p></div>
+  <div class="card"><h3>Hallazgos</h3><ul class="lista" id="r-hall"></ul></div>
 </section>
-<!-- ============================== CALIDAD -->
-<section class="tab" id="t-calidad">
-  <div class="tiles" id="tiles-calidad"></div>
-  <div class="card"><h3>Imputación de flete a traslados XI de flota propia</h3>
-    <p class="nota">Un viaje XI cuyas líneas tienen todas importe en 0 / 1 peso es un viaje de flota propia (TMS lo confirma: transportista PFSSA, «MQ RIONEGRO»). Tiene costo aunque SAP no lo registre: se imputa por viajes similares de terceros (misma ruta o banda de distancia) o por costo fijo + COP/km. Los viajes dentro del mismo nodo (planta → su propio CEDI) no se imputan.</p>
-    <div class="tiles" id="tiles-imp"></div>
-    <div class="grid g2">
-      <div><div id="ch-imp" class="chart" style="min-height:420px"></div></div>
-      <div class="tabla-wrap" style="max-height:420px"><table id="tb-imp"></table></div>
-    </div>
-  </div>
+<!-- ======================================================== 2 DIAGNOSTICO -->
+<section class="tab" id="t-diag">
+  <p class="nota">Operación observada en SAP en el horizonte (<span class="tipo historico"><i></i>histórico</span>). La producción diaria y el inventario
+    se <span class="tipo estimado"><i></i>reconstruyen</span> porque no existen en los datos.</p>
+  <div class="tiles" id="d-tiles"></div>
+  <div class="card"><h3>¿Cómo se atiende hoy a cada segmento de clientes?</h3>
+    <div class="filtros"><label>Agrupar por<select id="d-seg"><option value="zona">Zona comercial</option><option value="ciudad">Ciudad</option><option value="familia">Familia de producto</option><option value="mercado">Mercado (N/E)</option></select></label></div>
+    <div class="tabla-wrap"><table id="d-tabla-seg"></table></div></div>
   <div class="grid g2">
-    <div class="card"><h3>% de líneas SAP con flete en 0 / 1 peso, por Tipo</h3><div id="ch-flete" class="chart"></div></div>
-    <div class="card"><h3>Validaciones por fuente y severidad</h3><div id="ch-sev" class="chart"></div></div>
+    <div class="card"><h3>Ocupación diaria de almacenes (reconstruida)</h3><div class="filtros"><label>Nodos<select id="d-nodo" multiple size="4" style="min-width:200px"></select></label></div>
+      <div id="d-ocup" class="chart"></div></div>
+    <div class="card"><h3>Producción estimada vs despachos observados (red, m3/día)</h3><div id="d-prod" class="chart"></div></div>
   </div>
-  <div class="card"><h3>Detalle de validaciones</h3>
-    <div class="filtros"><select id="f-fuente"></select><select id="f-sev"></select><input type="text" id="f-txt" placeholder="Buscar..."></div>
-    <div class="tabla-wrap"><table id="tb-calidad"></table></div>
-  </div>
+  <div class="card"><h3>Traslados XI observados (planta / CEDI → CEDI)</h3><div class="tabla-wrap"><table id="d-xi"></table></div></div>
+  <div class="card"><h3>Restricciones y alertas de la operación actual</h3><div class="tabla-wrap"><table id="d-alertas"></table></div></div>
+  <details class="sec"><summary>Información técnica: calidad de datos e imputación de fletes</summary>
+    <div class="tiles" id="d-cal-tiles"></div>
+    <div class="filtros"><select id="d-cal-sev"><option value="">Todas las severidades</option><option>Alta</option><option>Media</option><option>Baja</option><option>OK</option></select><input type="text" id="d-cal-txt" placeholder="Buscar..."></div>
+    <div class="tabla-wrap"><table id="d-cal"></table></div>
+    <h4>Traslados XI de flota propia: flete imputado por ruta (COP por mes)</h4>
+    <div class="tabla-wrap" style="max-height:320px"><table id="d-imp"></table></div>
+  </details>
 </section>
-<!-- ============================== DIAGNOSTICO -->
-<section class="tab" id="t-diagnostico">
-  <div class="card"><h3>Volumen despachado a clientes por planta productora (m3/mes)</h3><div id="ch-planta-mes" class="chart" style="min-height:400px"></div>
-    <p class="nota">Se observa la transición: la planta cerrada baja desde julio y Cajicá (CO01) absorbe el volumen. Mes parcial final excluido.</p></div>
-  <div class="grid g2">
-    <div class="card"><h3>Tarifa de distribución vs distancia (CEDI → ciudad)</h3><div id="ch-tar-dist" class="chart"></div></div>
-    <div class="card"><h3>Tarifa de traslado XI vs distancia (terceros y flota propia imputada)</h3><div id="ch-tar-xi" class="chart"></div></div>
+<!-- ======================================================== 3 SIMULACION -->
+<section class="tab" id="t-sim">
+  <div class="card">
+    <div class="filtros"><label>Partir de los parámetros de<select id="s-base"></select></label><button class="btn" id="s-cargar">Cargar</button>
+      <label>Nombre del escenario<input type="text" id="s-nombre" value="Parametrizado (navegador)"></label>
+      <button class="btn pri" id="s-run">Optimizar escenario</button><span class="estado" id="s-estado"></span></div>
+    <p class="nota" style="margin:4px 0 0">El navegador resuelve el <b>mismo modelo de optimización</b> que Python (HiGHS compilado a WebAssembly, sin internet). Toma 2 a 10 s; el modo de producción flexible tarda más.
+      El resultado queda disponible en Escenarios, Mapa y Validador.</p>
   </div>
-  <div class="grid g2">
-    <div class="card"><h3>Utilización de capacidad de producción</h3><div id="ch-plantas" class="chart"></div></div>
-    <div class="card"><h3>Ocupación estimada de almacenes (actual)</h3><div id="ch-asis-alm" class="chart"></div></div>
-  </div>
-  <div class="card"><h3>Nodos</h3><div class="tabla-wrap"><table id="tb-nodos"></table></div></div>
+  <details class="sec" open><summary>Horizonte y demanda</summary><div class="form" id="f-dem"></div>
+    <h4>Crecimiento por zona comercial y por familia (%)</h4><div class="grid g2"><div class="tabla-wrap" style="max-height:260px"><table id="f-zona"></table></div><div class="tabla-wrap" style="max-height:260px"><table id="f-fam"></table></div></div></details>
+  <details class="sec" open><summary>Red y producción</summary><div class="form" id="f-red"></div>
+    <h4>Reparto de la producción de la planta cerrada (si se personaliza)</h4><div class="form" id="f-rep"></div></details>
+  <details class="sec"><summary>Inventario y capacidad</summary><div class="form" id="f-inv"></div></details>
+  <details class="sec" open><summary>Nodos: plantas, CEDI y bodegas externas</summary>
+    <p class="nota">Modo: <b>fijo</b> = siempre abierto (su costo fijo se paga); <b>opcional</b> = el optimizador decide abrirlo; <b>forzado</b> = obligatorio; <b>cerrado</b> = no existe en el escenario.
+      Capacidad = posiciones × m3 por posición × utilización máxima.</p>
+    <div class="tabla-wrap"><table id="f-nodos"></table></div></details>
+  <details class="sec"><summary>Transporte</summary><div class="form" id="f-tra"></div>
+    <h4>Factor de tarifa de distribución por zona</h4><div class="tabla-wrap" style="max-height:260px"><table id="f-fz"></table></div></details>
+  <details class="sec"><summary>Servicio y holguras (penalizaciones)</summary><div class="form" id="f-srv"></div>
+    <p class="nota">Las holguras hacen visible una infactibilidad en vez de esconderla. Si las desactiva y el problema no tiene solución, el modelo lo informa.</p></details>
+  <div class="card" id="s-res" style="display:none"><h3>Resultado del escenario simulado</h3><div class="tiles" id="s-tiles"></div>
+    <div class="tabla-wrap" style="max-height:240px"><table id="s-diag"></table></div><div id="s-ocup" class="chart"></div></div>
 </section>
-<!-- ============================== RESULTADOS -->
-<section class="tab" id="t-resultados">
-  <div class="card"><h3>Comparación de escenarios (millones COP/mes)</h3><div class="tabla-wrap" style="max-height:none"><table id="tb-comp"></table></div></div>
-  <div class="card"><h3>Puente de costos (waterfall)</h3>
-    <div class="filtros"><label>Escenario base<select id="wf-base"></select></label><label>Escenario comparado<select id="wf-comp"></select></label>
-      <label>Detalle<select id="wf-agr"><option value="comp">Por componente</option><option value="grupo">Transporte / almacenamiento / fijos</option></select></label></div>
-    <div id="ch-wf" class="chart" style="min-height:420px"></div></div>
-  <h2>Detalle de un escenario</h2>
-  <div class="filtros"><label>Escenario<select id="sel-esc"></select></label></div>
-  <div class="tiles" id="tiles-esc"></div>
-  <div class="card"><h3>Flujo de producto: planta → almacén → zona (m3/mes)</h3><div id="ch-sankey" class="chart" style="min-height:520px"></div></div>
+<!-- ======================================================== 4 ESCENARIOS -->
+<section class="tab" id="t-esc">
+  <div class="card"><h3>Escenarios a comparar</h3><div class="checks" id="e-sel"></div></div>
+  <div class="card"><h3>Indicadores (costos en millones COP por mes equivalente)</h3><div class="tabla-wrap" style="max-height:none"><table id="e-kpi"></table></div></div>
   <div class="grid g2">
-    <div class="card"><h3>Ocupación de almacenes</h3><div id="ch-util" class="chart"></div></div>
-    <div class="card"><h3>Costos del escenario (millones COP/mes)</h3><div id="ch-costo-esc" class="chart"></div></div>
+    <div class="card"><h3>Puente de costos</h3>
+      <div class="filtros"><label>Base<select id="e-wb"></select></label><label>Comparado<select id="e-wc"></select></label>
+        <label>Detalle<select id="e-wd"><option value="comp">Por componente</option><option value="grupo">Por grupo</option></select></label></div>
+      <div id="e-wf" class="chart" style="min-height:400px"></div></div>
+    <div class="card"><h3>Transporte, almacenamiento, fijos y penalizaciones</h3><div id="e-grupos" class="chart" style="min-height:440px"></div></div>
   </div>
-  <div class="card"><h3>Traslados XI (planta / CEDI → CEDI)</h3><div class="tabla-wrap"><table id="tb-tras"></table></div></div>
-  <div class="card"><h3>Distribución almacén → ciudad (principales 300 rutas)</h3>
-    <div class="filtros"><input type="text" id="f-dist" placeholder="Filtrar por almacén, ciudad o zona..."></div>
-    <div class="tabla-wrap"><table id="tb-dist"></table></div></div>
-  <h2>Sensibilidad (modelo completo)</h2>
-  <div class="grid g2">
-    <div class="card"><h3>Costo total vs días de inventario</h3><div id="ch-sens-doi" class="chart"></div></div>
-    <div class="card"><h3>Costo total vs factor de tarifa de flete</h3><div id="ch-sens-flete" class="chart"></div></div>
-  </div>
-  <p class="nota">Cuando el óptimo coincide con la Opción B, su línea (gruesa, translúcida) queda debajo de la del óptimo.</p>
+  <div class="card"><h3>Evolución diaria</h3>
+    <div class="filtros"><label>Nodo<select id="e-nodo"></select></label><label>Indicador<select id="e-met">
+      <option value="ocupacion">Ocupación (% de posiciones)</option><option value="inv_fin">Inventario final (m3)</option><option value="despachos">Despachos a clientes (m3)</option>
+      <option value="entradas">Entradas por traslado (m3)</option><option value="salidas_tr">Salidas por traslado (m3)</option><option value="produccion">Producción (m3)</option>
+      <option value="exceso">Exceso de capacidad (m3)</option><option value="atraso">Atraso acumulado (m3)</option></select></label></div>
+    <div id="e-dia" class="chart"></div></div>
+  <div class="card"><h3>¿Cómo cambia la atención de los clientes? (base vs comparado del puente)</h3>
+    <div class="filtros"><label>Nivel<select id="e-cn"><option value="cliente">Cliente</option><option value="ciudad" selected>Ciudad</option></select></label>
+      <label>Zona<select id="e-cz"></select></label><label>Familia<select id="e-cf"></select></label>
+      <label class="chk" style="flex-direction:row;align-items:center"><input type="checkbox" id="e-cc" checked> Solo los que cambian de origen</label>
+      <label class="chk" style="flex-direction:row;align-items:center"><input type="checkbox" id="e-ca"> Solo afectados por la planta cerrada</label></div>
+    <div class="tabla-wrap"><table id="e-cli"></table></div></div>
+  <div class="card"><h3>¿Qué referencias concentra cada nodo?</h3>
+    <div class="filtros"><label>Escenario<select id="e-rs"></select></label><label>Nodo<select id="e-rn"></select></label></div>
+    <div class="tabla-wrap" style="max-height:340px"><table id="e-ref"></table></div></div>
 </section>
-<!-- ============================== MAPA -->
+<!-- ======================================================== 5 MAPA -->
 <section class="tab" id="t-mapa">
   <div class="card">
     <div class="filtros">
       <label>Escenario<select id="m-esc"></select></label>
-      <label>Vista<select id="m-vista">
-        <option value="1">1 · Planta productora → cliente</option>
-        <option value="2">2 · Centro de distribución → cliente</option>
-        <option value="3">3 · Traslados XI (planta ↔ CEDI)</option>
-        <option value="4">4 · Mercado: Nacional (N) / Exportación (E)</option></select></label>
+      <label>Vista<select id="m-vista"><option value="1">1 · Planta productora → cliente</option><option value="2">2 · Centro de distribución → cliente</option>
+        <option value="3">3 · Traslados XI (planta ↔ CEDI)</option><option value="4">4 · Mercado: Nacional (N) / Exportación (E)</option></select></label>
       <label>Nivel de destino<select id="m-nivel"><option value="cliente">Cliente</option><option value="ciudad" selected>Ciudad</option><option value="depto">Departamento</option><option value="zona">Zona comercial (región)</option></select></label>
       <label>Mercado<select id="m-merc"><option value="T">Todos</option><option value="N">N · Nacional</option><option value="E">E · Exportación</option></select></label>
-      <label>Origen<select id="m-origen"></select></label>
-      <label>Zona destino<select id="m-zona"></select></label>
-      <label>Flujos en el mapa: <output id="m-topn-o"></output><input type="range" id="m-topn" min="10" max="600" step="10" value="150"></label>
+      <label>Origen<select id="m-origen"></select></label><label>Zona destino<select id="m-zona"></select></label>
+      <label>Flujos: <output id="m-topn-o"></output><input type="range" id="m-topn" min="10" max="600" step="10" value="150"></label>
       <label>Mapa base<select id="m-base"><option value="offline">Sin internet (contorno)</option><option value="online">Con internet (calles)</option></select></label>
-      <label>Encuadre<select id="m-enc"><option value="co">Colombia</option><option value="todo">Todos los flujos (incluye exportación lejana)</option></select></label>
+      <label>Encuadre<select id="m-enc"><option value="co">Colombia</option><option value="todo">Todos los flujos</option></select></label>
     </div>
-    <div class="tiles" id="m-tiles"></div>
-    <div class="leyenda" id="m-ley"></div>
-    <div id="m-mapa" class="mapa"></div>
-    <p class="nota">Grosor de línea ∝ m3/mes. Pase el cursor por el punto medio de cada línea para ver el detalle. Cuadros = plantas, círculos = CEDI, rombos = bodegas externas, × = planta cerrada.</p>
+    <div class="tiles" id="m-tiles"></div><div class="leyenda" id="m-ley"></div><div id="m-mapa" class="mapa"></div>
+    <p class="nota">Grosor ∝ m3 del horizonte. Pase el cursor por el punto medio de cada línea. Cuadros = plantas, círculos = CEDI, rombos = bodegas externas.</p>
   </div>
   <div class="grid g2">
-    <div class="card"><h3>Volumen por origen en cada escenario (vista y filtros actuales)</h3><div id="m-comp" class="chart" style="min-height:420px"></div></div>
-    <div class="card"><h3>Nacional vs exportación por escenario (m3/mes)</h3><div id="m-merc-ch" class="chart" style="min-height:420px"></div></div>
+    <div class="card"><h3>Volumen por origen en cada escenario</h3><div id="m-comp" class="chart" style="min-height:420px"></div></div>
+    <div class="card"><h3>Detalle de flujos</h3><div class="tabla-wrap"><table id="m-tabla"></table></div></div>
   </div>
-  <div class="card"><h3>Detalle de flujos <button class="btn" id="m-csv" style="float:right">Descargar CSV</button></h3>
-    <div class="tabla-wrap"><table id="m-tabla"></table></div></div>
 </section>
-<!-- ============================== SIMULADOR -->
-<section class="tab" id="t-simulador">
+<!-- ======================================================== 6 VALIDADOR -->
+<section class="tab" id="t-val">
   <div class="card">
-    <p style="margin-top:0">Configure los parámetros; el navegador resuelve <b>5 escenarios</b> a la vez (modelo de optimización agregado por zona comercial):
-    <b>Actual</b> (CO10 operando), <b>A</b> bodega externa, <b>B</b> traslado a CEDI, <b>Óptimo</b> y su escenario <b>Personalizado</b>.</p>
-    <div class="filtros"><button class="btn pri" id="sim-run">Recalcular</button><button class="btn" id="sim-reset">Restablecer valores</button><span class="nota" id="sim-estado"></span></div>
+    <p style="margin-top:0">Evalúe una decisión concreta: <i>«Necesito atender X m3 de una familia en una ciudad. ¿Cuánto cuesta directo, vía otro CEDI o con una bodega externa?»</i></p>
+    <div class="filtros">
+      <label>Escenario<select id="v-esc"></select></label><label>Ciudad destino<select id="v-z"></select></label>
+      <label>Cliente (opcional)<select id="v-cli"></select></label><label>Familia<select id="v-f"></select></label>
+      <label>Planta de origen<select id="v-o"></select></label><label>Volumen (m3)<input type="number" id="v-m3" value="10" min="0.1" step="0.1"></label>
+      <label>Día de despacho<select id="v-t"></select></label><label>Días en el almacén intermedio<input type="number" id="v-dias" value="1" min="0" step="1" class="chico"></label>
+      <label>Bodegas externas<select id="v-be"><option value="perm">Permitidas</option><option value="no">No permitidas</option><option value="solo">Solo bodegas externas</option></select></label>
+      <button class="btn pri" id="v-run">Evaluar rutas</button></div>
   </div>
-  <details class="sec" open><summary>1 · Escenario personalizado: red y política de almacenamiento</summary>
-    <div class="ctrl" id="sim-pers"></div></details>
-  <details class="sec"><summary>2 · Reparto de la producción de la planta cerrada</summary>
-    <p class="nota">Por defecto cada referencia va a la planta que indica el maestro de referencias. Active «personalizar» para repartir todo el volumen de la planta cerrada con estos porcentajes (se normalizan a 100 %). Aplica a A, B, Óptimo y Personalizado.</p>
-    <div class="ctrl" id="sim-rep"></div></details>
-  <details class="sec" open><summary>3 · Almacenamiento</summary><div class="ctrl" id="sim-alm"></div></details>
-  <details class="sec" open><summary>4 · Transporte (terceros, flota propia y distribución)</summary><div class="ctrl" id="sim-tra"></div></details>
-  <details class="sec"><summary>5 · Demanda y tarifas por zona</summary><div class="ctrl" id="sim-dem"></div>
-    <div class="tabla-wrap" style="margin-top:12px"><table id="sim-zonas"></table></div></details>
-  <details class="sec"><summary>6 · Almacenes: activar, capacidad y costos</summary>
-    <p class="nota">Activa = se permite usar. El costo fijo de bodegas externas solo se paga si se usan (o si la política las fuerza abiertas).</p>
-    <div class="tabla-wrap"><table id="sim-tabla"></table></div></details>
-  <div class="sticky-res"><div class="tiles" id="sim-tiles"></div></div>
-  <div class="card reco"><ul class="lista" id="sim-reco"></ul></div>
-  <div class="card"><h3>Puente de costos</h3>
-    <div class="filtros"><label>Base<select id="sw-base"></select></label><label>Comparado<select id="sw-comp"></select></label>
-      <label>Detalle<select id="sw-agr"><option value="comp">Por componente</option><option value="grupo">Transporte / almacenamiento / fijos</option></select></label></div>
-    <div id="ch-sim-wf" class="chart" style="min-height:400px"></div></div>
-  <div class="card"><h3>Costo por escenario y componente (millones COP/mes)</h3><div id="ch-sim-costos" class="chart" style="min-height:440px"></div></div>
-  <div class="filtros"><span>Ver detalle de:</span><span class="seg" id="sim-modo-sel"></span></div>
-  <div class="grid g2">
-    <div class="card"><h3>Ocupación de almacenes</h3><div id="ch-sim-util" class="chart"></div></div>
-    <div class="card"><h3>Producción por planta vs capacidad</h3><div id="ch-sim-plantas" class="chart"></div></div>
-  </div>
-  <div class="card"><h3>Mapa del escenario simulado</h3>
-    <div class="filtros"><label>Vista<select id="sm-vista"><option value="xi">Traslados XI planta → almacén</option><option value="cedi">Almacén → zona</option><option value="planta">Planta → zona</option></select></label>
-      <label>Mercado<select id="sm-merc"><option value="T">Todos</option><option value="N">N · Nacional</option><option value="E">E · Exportación</option></select></label>
-      <label>Mapa base<select id="sm-base"><option value="offline">Sin internet</option><option value="online">Con internet</option></select></label></div>
-    <div class="leyenda" id="sm-ley"></div><div id="sm-mapa" class="mapa" style="height:560px"></div></div>
-  <div class="grid g2">
-    <div class="card"><h3>Traslados del escenario seleccionado</h3><div class="tabla-wrap"><table id="sim-tras"></table></div></div>
-    <div class="card"><h3>Despachos por almacén y zona</h3><div class="tabla-wrap"><table id="sim-dist"></table></div></div>
-  </div>
-  <p class="nota">El simulador es una versión agregada por zona comercial del modelo completo; sus totales difieren ~1-2 % de los oficiales (pestaña Escenarios), que se calculan por ciudad.</p>
+  <div class="card"><h3>Alternativas de ruta (costo variable de atender la demanda adicional)</h3>
+    <div class="tabla-wrap" style="max-height:none"><table id="v-tabla"></table></div>
+    <p class="nota" id="v-nota"></p></div>
+  <div class="card"><h3>Costo marginal exacto (re-optimizando la red)</h3>
+    <p class="nota">Agrega la demanda al escenario y vuelve a optimizar toda la red con las bodegas del escenario fijas. La diferencia del objetivo es el costo marginal real; puede ser menor que la ruta aislada porque el modelo reacomoda otros flujos (sustitución).</p>
+    <div class="filtros"><button class="btn" id="v-marg">Calcular costo marginal exacto</button><span class="estado" id="v-mest"></span></div>
+    <div class="tabla-wrap" style="max-height:none"><table id="v-mtab"></table></div></div>
 </section>
-<!-- ============================== METODOLOGIA -->
-<section class="tab" id="t-metodologia">
-  <div class="card"><h3>Pregunta de negocio</h3>
-    <p>Con el cierre de la planta y el traslado de su producción a otra planta, ¿es mejor almacenar el volumen adicional en una <b>bodega externa</b> o hacer un <b>traslado a un CEDI de otra ciudad</b> con capacidad? El modelo compara el costo total mensual — <b>transporte</b> (traslados XI de terceros y flota propia + distribución), <b>almacenamiento</b> (manejo, posiciones y fijos de bodegas externas) y <b>fijos de plantas/CEDI</b> — bajo las mismas restricciones de capacidad y demanda.</p></div>
-  <div class="card"><h3>Formulación (MILP, horizonte mensual, m3)</h3>
-<div class="formula">Conjuntos: P plantas, W almacenes (CEDI propios, 3PL, bodega externa actual y candidatas), Z ciudades, K productos (planta de origen)
-Variables: x[p,w,k] ≥ 0  traslado de planta p a almacén w     y[w,z,k] ≥ 0  despacho de w a ciudad z
-           a[w] ∈ {0,1}  usar bodega opcional                d[w] ≥ 0  inventario que no cabe (penalizado)
-
-min  Σ [(1-s)·c_terceros + s·c_flota_propia][p,w]·x  +  Σ (c_dist[w,z] + v[w])·y  +  Σ F[w]·a[w]  +  pen·Σ d[w]  + fijos de nodos
-s.a. Σ_w y[w,z,k] = D[z,k]                          demanda de cada ciudad
-     Σ_p x[p,w,k] = Σ_z y[w,z,k]                    balance en cada almacén
-     (DOI/30)·Σ y[w,·,·] ≤ Cap[w]·a[w] + d[w]       capacidad de almacenamiento
-     Σ_k x[p,w,k] ≤ XI_actual[p,w]                  solo Opción A: traslados a otros CEDI no superan el nivel actual
-     s = participación histórica de flota propia en la ruta;  v[w] = manejo + costo_posición·DOI/30/m3_por_posición</div></div>
-  <div class="card"><h3>Escenarios</h3><div class="tabla-wrap"><table id="tb-escenarios"></table></div></div>
-  <div class="card"><h3>Tratamiento de datos</h3><ul class="lista" id="met-datos"></ul></div>
-  <div class="card"><h3>Parámetros y supuestos</h3><div class="tabla-wrap"><table id="tb-param"></table></div></div>
-</section>
+<!-- ======================================================== 7 METODOLOGIA -->
+<section class="tab met" id="t-met"><div id="met"></div></section>
 </main>
 <script type="application/json" id="datos">/*__DATA__*/</script>
+<script type="application/octet-stream" id="wasm">/*__WASM__*/</script>
 <script>/*__TOPOJSON__*/</script>
 <script>/*__PLOTLY__*/</script>
-<script>/*__LPSOLVER__*/</script>
-<script>/*__SIMULADOR__*/</script>
+<script>/*__HIGHS__*/</script>
+<script>window.cargarHiGHSModulo = (typeof Module !== "undefined") ? Module : null;</script>
+<script>/*__MOTOR__*/</script>
 <script>
 (function(){
 "use strict";
 var D = JSON.parse(document.getElementById("datos").textContent);
-var NF = new Intl.NumberFormat("es-CO", {maximumFractionDigits: 0});
-var NF1 = new Intl.NumberFormat("es-CO", {maximumFractionDigits: 1, minimumFractionDigits: 1});
+var BASE = D.base, NODOS = BASE.nodos, IDN = {}; NODOS.forEach(function(n, i){ IDN[n.id] = i; });
+var NF = new Intl.NumberFormat("es-CO", {maximumFractionDigits: 0}), NF1 = new Intl.NumberFormat("es-CO", {maximumFractionDigits: 1, minimumFractionDigits: 1});
 var PF = new Intl.NumberFormat("es-CO", {style: "percent", maximumFractionDigits: 1});
-function M(v){ return NF.format((v || 0)/1e6); }
+function $(id){ return document.getElementById(id); }
+function M(v){ return NF.format((v || 0) / 1e6); }
 function css(n){ return getComputedStyle(document.documentElement).getPropertyValue(n).trim(); }
 function serie(i){ return css("--s" + (i % 8 + 1)); }
 function esc(t){ return String(t == null ? "" : t).replace(/[&<>"]/g, function(c){ return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]; }); }
-function $(id){ return document.getElementById(id); }
-
-/* componentes de costo: [clave Python, etiqueta, grupo, clave simulador] */
-var COMP = [["Traslado XI terceros","XI terceros","Transporte","terc"],["Traslado XI flota propia","XI flota propia","Transporte","prop"],
-  ["Distribución","Distribución","Transporte","dist"],["Manejo en almacén","Manejo","Almacenamiento","manejo"],
-  ["Posiciones bodega externa","Posiciones bodega","Almacenamiento","pos"],["Fijo bodegas externas","Fijo bodegas externas","Almacenamiento","fijo_be"],
-  ["Fijo nodos (plantas y CEDI)","Fijo plantas/CEDI","Fijo nodos","fijo_nodos"],["Penalización déficit capacidad","Déficit capacidad","Penalización","penal"]];
-var GRUPOS = [["Transporte","Total transporte",0],["Almacenamiento","Total almacenamiento",2],["Fijo nodos","Total fijo nodos",6],["Penalización","Total penalización",7]];
-function simAPy(c){ var o = {}; COMP.forEach(function(x){ o[x[0]] = c[x[3]] || 0; }); o.Total = c.total;
-  o["Total transporte"] = c.transporte; o["Total almacenamiento"] = c.almacenamiento; o["Total fijo nodos"] = c.fijo_nodos; o["Total penalización"] = c.penal; return o; }
-
+function sum(a){ var s = 0; for (var i = 0; i < a.length; i++) s += a[i]; return s; }
+function clone(o){ return JSON.parse(JSON.stringify(o)); }
+var COMP = MotorRed.COMP, GRUPO = MotorRed.GRUPO;
+var CORTO = {"Traslado XI terceros":"XI terceros","Traslado XI flota propia":"XI flota propia","Distribución":"Distribución","Manejo":"Manejo","Almacenaje":"Almacenaje",
+  "Costo financiero inventario":"Costo financiero","Fijo bodegas externas":"Fijo bodegas ext.","Fijo nodos (plantas y CEDI)":"Fijo plantas/CEDI",
+  "Penalización atraso":"Pen. atraso","Penalización no atendido":"Pen. no atendido","Penalización exceso capacidad":"Pen. exceso capacidad",
+  "Penalización stock seguridad":"Pen. stock seguridad","Penalización servicio":"Pen. servicio"};
+var GRUPOS = [["Transporte", 0], ["Almacenamiento", 2], ["Fijo nodos", 6], ["Penalizaciones", 7]];
+var COLCOMP = {"Traslado XI terceros":0,"Traslado XI flota propia":1,"Distribución":2,"Manejo":3,"Almacenaje":4,"Costo financiero inventario":4,"Fijo bodegas externas":5,
+  "Fijo nodos (plantas y CEDI)":6,"Penalización atraso":7,"Penalización no atendido":7,"Penalización exceso capacidad":7,"Penalización stock seguridad":7,"Penalización servicio":7};
 function base(extra){
-  var l = {paper_bgcolor: css("--surface"), plot_bgcolor: css("--surface"),
-    font: {family: 'system-ui,-apple-system,"Segoe UI",sans-serif', color: css("--ink2"), size: 12.5},
+  var l = {paper_bgcolor: css("--surface"), plot_bgcolor: css("--surface"), font: {family: 'system-ui,-apple-system,"Segoe UI",sans-serif', color: css("--ink2"), size: 12.5},
     margin: {l: 64, r: 20, t: 16, b: 48},
     xaxis: {gridcolor: css("--grid"), linecolor: css("--axis"), zerolinecolor: css("--axis"), tickfont: {color: css("--muted")}},
     yaxis: {gridcolor: css("--grid"), linecolor: css("--axis"), zerolinecolor: css("--axis"), tickfont: {color: css("--muted")}},
     legend: {orientation: "h", y: 1.12, x: 0, traceorder: "normal", font: {color: css("--ink2")}},
-    hoverlabel: {bgcolor: css("--surface"), bordercolor: css("--axis"), font: {color: css("--ink")}},
-    separators: ",."};
+    hoverlabel: {bgcolor: css("--surface"), bordercolor: css("--axis"), font: {color: css("--ink")}}, separators: ",."};
   return deep(l, extra || {});
 }
 function deep(a, b){ for (var k in b){ if (b[k] && typeof b[k] === "object" && !Array.isArray(b[k]) && a[k] && typeof a[k] === "object") deep(a[k], b[k]); else a[k] = b[k]; } return a; }
 var CFG = {responsive: true, displaylogo: false, modeBarButtonsToRemove: ["lasso2d","select2d","autoScale2d"]};
 function plot(id, data, layout){ Plotly.react(id, data, base(layout), CFG); }
-
 function tabla(id, cols, filas, opts){
-  opts = opts || {};
-  var el = $(id), estado = el._orden || {col: null, asc: true}, f = filas.slice();
-  if (estado.col !== null){
-    var c = cols[estado.col];
+  opts = opts || {}; var el = $(id), estado = el._orden || {col: null, asc: true}, f = filas.slice();
+  if (estado.col !== null){ var c = cols[estado.col];
     f.sort(function(a, b){ var x = a[c.k], y = b[c.k]; if (x == null) return 1; if (y == null) return -1;
-      return (typeof x === "number" ? x - y : String(x).localeCompare(String(y))) * (estado.asc ? 1 : -1); });
-  }
+      return (typeof x === "number" ? x - y : String(x).localeCompare(String(y))) * (estado.asc ? 1 : -1); }); }
   var total = opts.total ? cols.map(function(c){ return c.sum ? f.reduce(function(s, r){ return s + (r[c.k] || 0); }, 0) : null; }) : null;
-  if (opts.max) f = f.slice(0, opts.max);
-  var h = "<thead><tr>" + cols.map(function(c, i){ return '<th data-i="' + i + '" class="' + (c.n ? "n" : "") + '">' + esc(c.t) +
-    (estado.col === i ? (estado.asc ? " ▲" : " ▼") : "") + "</th>"; }).join("") + "</tr></thead><tbody>";
-  h += f.map(function(r){ return "<tr>" + cols.map(function(c){ var v = r[c.k];
-    var txt = c.fmt ? c.fmt(v, r) : (typeof v === "number" ? NF.format(v) : esc(v));
-    return '<td class="' + (c.n ? "n" : "") + '">' + txt + "</td>"; }).join("") + "</tr>"; }).join("") + "</tbody>";
-  if (total) h += "<tfoot><tr>" + cols.map(function(c, i){ return '<td class="' + (c.n ? "n" : "") + '">' + (i === 0 ? "Total" : (total[i] == null ? "" : (c.fmt ? c.fmt(total[i], {}) : NF.format(total[i])))) + "</td>"; }).join("") + "</tr></tfoot>";
+  var n0 = f.length; if (opts.max) f = f.slice(0, opts.max);
+  var h = "<thead><tr>" + cols.map(function(c, i){ return '<th data-i="' + i + '" class="' + (c.n ? "n" : "") + '">' + esc(c.t) + (estado.col === i ? (estado.asc ? " ▲" : " ▼") : "") + "</th>"; }).join("") + "</tr></thead><tbody>";
+  h += f.map(function(r){ return '<tr class="' + (r._cls || "") + '">' + cols.map(function(c){ var v = r[c.k];
+    var txt = c.fmt ? c.fmt(v, r) : (typeof v === "number" ? NF.format(v) : esc(v)); return '<td class="' + (c.n ? "n" : "") + '">' + txt + "</td>"; }).join("") + "</tr>"; }).join("") + "</tbody>";
+  if (total) h += "<tfoot><tr>" + cols.map(function(c, i){ return '<td class="' + (c.n ? "n" : "") + '">' + (i === 0 ? "Total" + (opts.max && n0 > opts.max ? " (" + NF.format(n0) + " filas)" : "") : (total[i] == null ? "" : (c.fmt ? c.fmt(total[i], {}) : NF.format(total[i])))) + "</td>"; }).join("") + "</tr></tfoot>";
   el.innerHTML = h; el._orden = estado;
-  el.querySelectorAll("th").forEach(function(th){ th.onclick = function(){ var i = +th.dataset.i;
-    el._orden = {col: i, asc: estado.col === i ? !estado.asc : false}; tabla(id, cols, filas, opts); }; });
+  el.querySelectorAll("th").forEach(function(th){ th.onclick = function(){ var i = +th.dataset.i; el._orden = {col: i, asc: estado.col === i ? !estado.asc : false}; tabla(id, cols, filas, opts); }; });
 }
 function opciones(sel, lista, valor){ var el = $(sel); el.innerHTML = lista.map(function(o){ return '<option value="' + esc(o[0]) + '">' + esc(o[1]) + "</option>"; }).join(""); if (valor != null) el.value = valor; }
-
-/* ---------------------------------------------------------------- waterfall */
-function waterfall(id, nb, cb, nomB, nomC, agr){
-  var items = agr === "grupo" ? GRUPOS.map(function(g){ return [g[1], g[0]]; }) : COMP.map(function(c){ return [c[0], c[1]]; });
-  var x = [nomB], y = [cb.Total - cb.Total], meas = ["absolute"], txt = [M(nb.Total)];
-  y[0] = nb.Total/1e6;
-  items.forEach(function(it){ var d = ((cb[it[0]] || 0) - (nb[it[0]] || 0))/1e6; if (Math.abs(d) < 0.5) return;
-    x.push(it[1]); y.push(d); meas.push("relative"); txt.push((d > 0 ? "+" : "") + NF.format(d)); });
-  x.push(nomC); y.push(cb.Total/1e6); meas.push("total"); txt.push(M(cb.Total));
-  plot(id, [{type: "waterfall", x: x, y: y, measure: meas, text: txt, textposition: "outside", cliponaxis: false,
-    textfont: {color: css("--ink2")}, connector: {line: {color: css("--axis"), width: 1}},
-    increasing: {marker: {color: css("--crit")}}, decreasing: {marker: {color: css("--good")}}, totals: {marker: {color: css("--accent")}},
-    hovertemplate: "%{x}<br>%{y:,.0f} M COP<extra></extra>"}],
-    {showlegend: false, margin: {t: 30, b: 90}, yaxis: {title: {text: "Millones COP / mes"}, rangemode: "normal"}, xaxis: {tickangle: -20}});
-}
-
-/* ---------------------------------------------------------------- mapas */
+function tipoBadge(t){ var m = {historico: ["historico", "Histórico + estimado"], optimizado: ["optimizado", "Optimizado"], simulado: ["simulado", "Simulado (navegador)"]}[t] || ["supuesto", t];
+  return '<span class="tipo ' + m[0] + '"><i></i>' + m[1] + "</span>"; }
 var COLOR_NODO = {CO01: 0, CO02: 1, CO03: 2, CO04: 3, CO10: 4, CO14: 5, CO99: 6};
 function colorNodo(id){ if (id in COLOR_NODO) return serie(COLOR_NODO[id]); if (String(id).indexOf("BE_") === 0) return serie(7); return css("--muted"); }
-var SIMB = {planta: "square", cedi: "circle", "3pl": "circle-open", bodega_externa: "diamond", candidata: "diamond-open", externo: "x"};
+function mes(r, k){ return (r.res.costos[k] || 0) * 30 / r.res.H; }
+
+/* ---------------------------------------------------------------- escenarios disponibles */
+var RES = {}, ORDEN = [];
+D.orden.forEach(function(id){ var e = D.escenarios[id]; RES[id] = {id: id, nombre: e.nombre, tipo: e.res.tipo === "historico" ? "historico" : "optimizado", prm: e.prm, res: e.res}; ORDEN.push(id); });
+function lista(){ return ORDEN.map(function(id){ return [id, RES[id].nombre]; }); }
+var _ins = {};
+function insDe(id){ var r = RES[id]; if (r.res.tipo === "historico") return null; if (!_ins[id]) _ins[id] = r.res.ins || MotorRed.instancia(BASE, r.prm); return _ins[id]; }
+var _flu = {};
+function flujos(id){ if (!_flu[id]){ var r = RES[id]; if (r.res.tipo !== "historico") r.res.ins = insDe(id); _flu[id] = MotorRed.flujosGrupo(BASE, r.res); } return _flu[id]; }
+function agregarEscenario(id, nombre, prm, res){ RES[id] = {id: id, nombre: nombre, tipo: "simulado", prm: prm, res: res}; if (ORDEN.indexOf(id) < 0) ORDEN.push(id); delete _ins[id]; delete _flu[id];
+  ["escsel"].forEach(function(){}); marcarDesactualizado(); }
+var desact = {};
+function marcarDesactualizado(){ desact = {esc: 1, mapa: 1, val: 1}; }
+
+/* ---------------------------------------------------------------- waterfall / barras */
+function waterfall(id, ca, cb, na, nb, agr, H1, H2){
+  na = String(na).split(" (")[0]; nb = String(nb).split(" (")[0]; if (na === nb) nb = nb + " ";
+  var f1 = 30 / H1, f2 = 30 / H2, items = agr === "grupo" ? GRUPOS.map(function(g){ return ["Total " + g[0].toLowerCase(), g[0]]; }) : COMP.map(function(c){ return [c, CORTO[c]]; });
+  var x = [na], y = [ca.Total * f1 / 1e6], meas = ["absolute"], txt = [M(ca.Total * f1)];
+  items.forEach(function(it){ var d = ((cb[it[0]] || 0) * f2 - (ca[it[0]] || 0) * f1) / 1e6; if (Math.abs(d) < 0.5) return; x.push(it[1]); y.push(d); meas.push("relative"); txt.push((d > 0 ? "+" : "") + NF.format(d)); });
+  x.push(nb); y.push(cb.Total * f2 / 1e6); meas.push("total"); txt.push(M(cb.Total * f2));
+  plot(id, [{type: "waterfall", x: x, y: y, measure: meas, text: txt, textposition: "outside", cliponaxis: false, textfont: {color: css("--ink2")},
+    connector: {line: {color: css("--axis"), width: 1}}, increasing: {marker: {color: css("--crit")}}, decreasing: {marker: {color: css("--good")}},
+    totals: {marker: {color: css("--accent")}}, hovertemplate: "%{x}<br>%{y:,.0f} M COP/mes<extra></extra>"}],
+    {showlegend: false, margin: {t: 30, b: 100}, yaxis: {title: {text: "Millones COP / mes"}}, xaxis: {tickangle: -25}});
+}
+function barrasGrupo(id, ids){
+  var nombres = ids.map(function(i){ return RES[i].nombre.replace(/ \(/, "<br>("); });
+  var data = GRUPOS.map(function(g){ var key = "Total " + g[0].toLowerCase();
+    return {type: "bar", orientation: "h", name: g[0], y: nombres, x: ids.map(function(i){ return mes(RES[i], key) / 1e6; }), marker: {color: serie(g[1]), line: {color: css("--surface"), width: 2}},
+      hovertemplate: "%{y}<br>" + g[0] + ": %{x:,.0f} M COP/mes<extra></extra>"}; });
+  data.push({type: "scatter", mode: "text", y: nombres, x: ids.map(function(i){ return mes(RES[i], "Total") / 1e6; }), text: ids.map(function(i){ return " " + M(mes(RES[i], "Total")); }),
+    textposition: "middle right", textfont: {color: css("--ink")}, showlegend: false, hoverinfo: "skip", cliponaxis: false});
+  var mx = Math.max.apply(null, ids.map(function(i){ return mes(RES[i], "Total") / 1e6; }));
+  plot(id, data, {barmode: "stack", bargap: 0.35, margin: {l: 260, r: 70, b: 70}, yaxis: {autorange: "reversed"}, xaxis: {range: [0, mx * 1.13], title: {text: "Millones COP / mes"}}, legend: {y: -0.12, yanchor: "top"}});
+}
+
+/* ---------------------------------------------------------------- mapa */
+var SIMB = {planta: "square", cedi: "circle", "3pl": "circle-open", bodega_externa: "diamond", candidata: "diamond-open"};
 function anchoBin(v, mx){ var r = v / (mx || 1); return r > 0.5 ? 9 : r > 0.25 ? 6.5 : r > 0.1 ? 4.5 : r > 0.03 ? 3 : 1.6; }
-/* lineas: [{olat,olon,dlat,dlon,m3,color,hover}], puntos: [{lat,lon,m3,color,hover}], nodos: [{lat,lon,id,tipo,cerrada,nombre}] */
 function dibujarMapa(id, lineas, puntos, nodos, baseMapa, encuadre){
-  var online = baseMapa === "online", T = online ? "scattermap" : "scattergeo";
-  var mx = lineas.reduce(function(m, l){ return Math.max(m, l.m3); }, 0);
-  var grupos = {};
+  var online = baseMapa === "online", T = online ? "scattermap" : "scattergeo", mx = lineas.reduce(function(m, l){ return Math.max(m, l.m3); }, 0), grupos = {}, data = [];
   lineas.forEach(function(l){ var k = l.color + "|" + anchoBin(l.m3, mx); (grupos[k] = grupos[k] || []).push(l); });
-  var data = [];
-  Object.keys(grupos).forEach(function(k){ var g = grupos[k], lat = [], lon = [];
-    g.forEach(function(l){ lat.push(l.olat, l.dlat, null); lon.push(l.olon, l.dlon, null); });
+  Object.keys(grupos).forEach(function(k){ var g = grupos[k], lat = [], lon = []; g.forEach(function(l){ lat.push(l.olat, l.dlat, null); lon.push(l.olon, l.dlon, null); });
     data.push({type: T, mode: "lines", lat: lat, lon: lon, line: {width: +k.split("|")[1], color: k.split("|")[0]}, opacity: 0.7, hoverinfo: "skip", showlegend: false}); });
-  data.push({type: T, mode: "markers", lat: lineas.map(function(l){ return (l.olat + l.dlat)/2; }), lon: lineas.map(function(l){ return (l.olon + l.dlon)/2; }),
-    marker: {size: 7, color: lineas.map(function(l){ return l.color; }), opacity: 0.55}, text: lineas.map(function(l){ return l.hover; }),
-    hovertemplate: "%{text}<extra></extra>", showlegend: false});
+  data.push({type: T, mode: "markers", lat: lineas.map(function(l){ return (l.olat + l.dlat) / 2; }), lon: lineas.map(function(l){ return (l.olon + l.dlon) / 2; }),
+    marker: {size: 7, color: lineas.map(function(l){ return l.color; }), opacity: 0.55}, text: lineas.map(function(l){ return l.hover; }), hovertemplate: "%{text}<extra></extra>", showlegend: false});
   if (puntos.length){ var pm = puntos.reduce(function(m, p){ return Math.max(m, p.m3); }, 0);
     data.push({type: T, mode: "markers", lat: puntos.map(function(p){ return p.lat; }), lon: puntos.map(function(p){ return p.lon; }),
-      marker: {size: puntos.map(function(p){ return 4 + 20 * Math.sqrt(p.m3 / (pm || 1)); }), color: puntos.map(function(p){ return p.color; }), opacity: 0.75,
-        line: online ? undefined : {color: css("--surface"), width: 1}},
+      marker: {size: puntos.map(function(p){ return 4 + 20 * Math.sqrt(p.m3 / (pm || 1)); }), color: puntos.map(function(p){ return p.color; }), opacity: 0.75},
       text: puntos.map(function(p){ return p.hover; }), hovertemplate: "%{text}<extra></extra>", showlegend: false}); }
-  var tipos = {};
+  var tipos = {}, nombresT = {planta: "Planta", cedi: "CEDI propio", "3pl": "CEDI 3PL", bodega_externa: "Bodega externa", candidata: "Bodega candidata", cerrada: "Cerrado en el escenario"};
   nodos.forEach(function(n){ if (n.lat == null) return; var t = n.cerrada ? "cerrada" : n.tipo; (tipos[t] = tipos[t] || []).push(n); });
-  var nombresT = {planta: "Planta", cedi: "CEDI propio", "3pl": "CEDI 3PL", bodega_externa: "Bodega externa", candidata: "Bodega candidata", cerrada: "Planta cerrada"};
   Object.keys(tipos).forEach(function(t){ var g = tipos[t];
-    var tr = {type: T, mode: "markers+text", name: nombresT[t] || t, lat: g.map(function(n){ return n.lat; }), lon: g.map(function(n){ return n.lon; }),
-      text: g.map(function(n){ return n.id; }), textposition: "top right", textfont: {color: css("--ink"), size: 11},
-      customdata: g.map(function(n){ return n.nombre; }), hovertemplate: "%{customdata}<extra></extra>",
+    var tr = {type: T, mode: "markers+text", name: nombresT[t] || t, lat: g.map(function(n){ return n.lat; }), lon: g.map(function(n){ return n.lon; }), text: g.map(function(n){ return n.id; }),
+      textposition: "top right", textfont: {color: css("--ink"), size: 11}, customdata: g.map(function(n){ return n.nombre; }), hovertemplate: "%{customdata}<extra></extra>",
       marker: {size: 13, color: g.map(function(n){ return colorNodo(n.id); })}};
-    if (!online) { tr.marker.symbol = t === "cerrada" ? "x" : (SIMB[t] || "circle"); tr.marker.line = {color: css("--ink"), width: 1}; }
+    if (!online){ tr.marker.symbol = t === "cerrada" ? "x" : (SIMB[t] || "circle"); tr.marker.line = {color: css("--ink"), width: 1}; }
     data.push(tr); });
-  var pts = [];
-  lineas.forEach(function(l){ pts.push([l.olat, l.olon], [l.dlat, l.dlon]); });
-  puntos.forEach(function(p){ pts.push([p.lat, p.lon]); });
-  nodos.forEach(function(n){ if (n.lat != null) pts.push([n.lat, n.lon]); });
-  var la = pts.map(function(p){ return p[0]; }).filter(function(v){ return v != null; }), lo = pts.map(function(p){ return p[1]; }).filter(function(v){ return v != null; });
+  var la = [], lo = [];
+  lineas.forEach(function(l){ la.push(l.olat, l.dlat); lo.push(l.olon, l.dlon); }); puntos.forEach(function(p){ la.push(p.lat); lo.push(p.lon); });
+  nodos.forEach(function(n){ if (n.lat != null){ la.push(n.lat); lo.push(n.lon); } });
+  la = la.filter(function(v){ return v != null; }); lo = lo.filter(function(v){ return v != null; });
   var la0 = Math.min.apply(null, la.concat([0])), la1 = Math.max.apply(null, la.concat([12])), lo0 = Math.min.apply(null, lo.concat([-79])), lo1 = Math.max.apply(null, lo.concat([-67]));
   if (encuadre !== "todo"){ la0 = Math.max(la0, -4.5); la1 = Math.min(la1, 13); lo0 = Math.max(lo0, -80.5); lo1 = Math.min(lo1, -66); }
   var lay = {margin: {l: 0, r: 0, t: 0, b: 0}, legend: {orientation: "h", y: 0, x: 0, bgcolor: css("--surface")}, showlegend: true};
-  if (online){
-    var oscuro = document.documentElement.getAttribute("data-theme") === "dark" || (!document.documentElement.getAttribute("data-theme") && matchMedia("(prefers-color-scheme: dark)").matches);
-    var ext = Math.max(la1 - la0, (lo1 - lo0) * 0.8);
-    lay.map = {style: oscuro ? "carto-darkmatter" : "carto-positron", center: {lat: (la0 + la1)/2, lon: (lo0 + lo1)/2}, zoom: Math.max(1.5, Math.min(6, Math.log2(360 / (ext * 1.3)) ))};
+  if (online){ var osc = document.documentElement.getAttribute("data-theme") === "dark" || (!document.documentElement.getAttribute("data-theme") && matchMedia("(prefers-color-scheme: dark)").matches);
+    var ext = Math.max(la1 - la0, (lo1 - lo0) * 0.8); lay.map = {style: osc ? "carto-darkmatter" : "carto-positron", center: {lat: (la0 + la1) / 2, lon: (lo0 + lo1) / 2}, zoom: Math.max(1.5, Math.min(6, Math.log2(360 / (ext * 1.3))))};
   } else {
-    var el = $(id), ratio = Math.max(0.6, (el.clientWidth || 1000) / (el.clientHeight || 600));
-    la0 -= 1; la1 += 1; lo0 -= 1.5; lo1 += 1.5;
-    var need = (la1 - la0) * ratio * 0.98;
-    if (lo1 - lo0 < need){ var c0 = (lo0 + lo1) / 2; lo0 = c0 - need / 2; lo1 = c0 + need / 2; }
-    else { var need2 = (lo1 - lo0) / ratio, c1 = (la0 + la1) / 2; if (la1 - la0 < need2){ la0 = c1 - need2 / 2; la1 = c1 + need2 / 2; } }
-    lay.geo = {projection: {type: "mercator"}, resolution: 50, showland: true, landcolor: css("--land"), showocean: true, oceancolor: css("--ocean"),
-      showcountries: true, countrycolor: css("--axis"), showcoastlines: true, coastlinecolor: css("--axis"), showlakes: true, lakecolor: css("--ocean"),
-      showframe: false, bgcolor: css("--surface"), lataxis: {range: [la0, la1]}, lonaxis: {range: [lo0, lo1]}};
+    var el = $(id), ratio = Math.max(0.6, (el.clientWidth || 1000) / (el.clientHeight || 600)); la0 -= 1; la1 += 1; lo0 -= 1.5; lo1 += 1.5;
+    var need = (la1 - la0) * ratio * 0.98; if (lo1 - lo0 < need){ var c0 = (lo0 + lo1) / 2; lo0 = c0 - need / 2; lo1 = c0 + need / 2; }
+    lay.geo = {projection: {type: "mercator"}, resolution: 50, showland: true, landcolor: css("--land"), showocean: true, oceancolor: css("--ocean"), showcountries: true, countrycolor: css("--axis"),
+      showcoastlines: true, coastlinecolor: css("--axis"), showlakes: true, lakecolor: css("--ocean"), showframe: false, bgcolor: css("--surface"), lataxis: {range: [la0, la1]}, lonaxis: {range: [lo0, lo1]}};
   }
   Plotly.react(id, data, base(lay), CFG);
 }
 function leyenda(id, items){ $(id).innerHTML = items.map(function(i){ return '<span><i style="background:' + i[1] + '"></i>' + esc(i[0]) + "</span>"; }).join(""); }
 
-/* ---------------------------------------------------------------- cabecera y pestañas */
-$("titulo").textContent = D.meta.titulo;
-$("subtitulo").textContent = D.meta.subtitulo;
+/* ---------------------------------------------------------------- pestañas */
+$("titulo").textContent = D.meta.titulo; $("subtitulo").textContent = D.meta.subtitulo;
 var renderers = {};
-document.querySelectorAll("#tabs button").forEach(function(b){
-  b.onclick = function(){
-    document.querySelectorAll("#tabs button").forEach(function(x){ x.setAttribute("aria-selected", x === b ? "true" : "false"); });
-    document.querySelectorAll("section.tab").forEach(function(s){ s.classList.toggle("on", s.id === "t-" + b.dataset.tab); });
-    try { localStorage.setItem("red_tab", b.dataset.tab); } catch(e) {}
-    pintar(b.dataset.tab);
-  };
-});
-function pintar(tab){ if (renderers[tab]) renderers[tab](); window.dispatchEvent(new Event("resize")); }
-$("tema").onclick = function(){
-  var r = document.documentElement, oscuro = matchMedia("(prefers-color-scheme: dark)").matches;
-  var actual = r.getAttribute("data-theme") || (oscuro ? "dark" : "light");
-  r.setAttribute("data-theme", actual === "dark" ? "light" : "dark");
-  pintar(document.querySelector('#tabs button[aria-selected="true"]').dataset.tab);
-};
-var ESC = D.escenarios, ESC_ID = {}; ESC.forEach(function(e){ ESC_ID[e.id] = e; });
-var LISTA_ESC = ESC.map(function(e){ return [e.id, e.corto]; });
+document.querySelectorAll("#tabs button").forEach(function(b){ b.onclick = function(){
+  document.querySelectorAll("#tabs button").forEach(function(x){ x.setAttribute("aria-selected", x === b ? "true" : "false"); });
+  document.querySelectorAll("section.tab").forEach(function(s){ s.classList.toggle("on", s.id === "t-" + b.dataset.tab); });
+  try { localStorage.setItem("red3_tab", b.dataset.tab); } catch (e) {}
+  if (renderers[b.dataset.tab]) renderers[b.dataset.tab](); window.dispatchEvent(new Event("resize")); }; });
+$("tema").onclick = function(){ var r = document.documentElement, osc = matchMedia("(prefers-color-scheme: dark)").matches, a = r.getAttribute("data-theme") || (osc ? "dark" : "light");
+  r.setAttribute("data-theme", a === "dark" ? "light" : "dark"); var t = document.querySelector('#tabs button[aria-selected="true"]').dataset.tab; if (renderers[t]) renderers[t](); };
 
-/* ---------------------------------------------------------------- RESUMEN */
-function barrasComp(id, ids, nombres, costos){
-  var data = COMP.map(function(c, j){ return {type: "bar", orientation: "h", name: c[1], y: nombres, x: ids.map(function(i){ return (costos(i)[c[0]] || 0)/1e6; }),
-    marker: {color: serie(j), line: {color: css("--surface"), width: 2}}, hovertemplate: "%{y}<br>" + c[1] + ": %{x:,.0f} M COP<extra></extra>"}; });
-  data.push({type: "scatter", mode: "text", y: nombres, x: ids.map(function(i){ return costos(i).Total/1e6; }),
-    text: ids.map(function(i){ return " " + M(costos(i).Total); }), textposition: "middle right", textfont: {color: css("--ink"), size: 12},
-    showlegend: false, hoverinfo: "skip", cliponaxis: false});
-  var mx = Math.max.apply(null, ids.map(function(i){ return costos(i).Total/1e6; }));
-  plot(id, data, {barmode: "stack", bargap: 0.35, margin: {l: 200, r: 70, b: 110}, yaxis: {autorange: "reversed"},
-    xaxis: {range: [0, mx*1.12]}, legend: {y: -0.12, yanchor: "top"}});
-}
-function barrasGrupo(id, ids, nombres, costos){
-  var data = GRUPOS.map(function(g){ return {type: "bar", orientation: "h", name: g[0], y: nombres, x: ids.map(function(i){ return (costos(i)[g[1]] || 0)/1e6; }),
-    marker: {color: serie(g[2]), line: {color: css("--surface"), width: 2}}, text: ids.map(function(i){ var v = costos(i)[g[1]] || 0; return v > costos(i).Total*0.08 ? M(v) : ""; }),
-    textposition: "inside", insidetextanchor: "middle", textfont: {color: "#ffffff"}, hovertemplate: "%{y}<br>" + g[0] + ": %{x:,.0f} M COP<extra></extra>"}; });
-  plot(id, data, {barmode: "stack", bargap: 0.35, margin: {l: 200, r: 30, b: 70}, yaxis: {autorange: "reversed"}, legend: {y: -0.08, yanchor: "top"}});
-}
+/* ======================================================== 1 RESUMEN */
 renderers.resumen = function(){
-  $("reco").innerHTML = D.resumen.recomendacion_lista.map(function(t){ return "<li>" + esc(t) + "</li>"; }).join("");
-  $("hallazgos").innerHTML = D.resumen.hallazgos.map(function(t){ return "<li>" + esc(t) + "</li>"; }).join("");
-  var claves = ["ASIS_REAL","E5_CIERRE_RED_ACTUAL","E2_BODEGA_EXTERNA","E1_TRASLADO_CEDI","E3_OPTIMO"].filter(function(k){ return ESC_ID[k]; });
-  var ab = ["E2_BODEGA_EXTERNA","E1_TRASLADO_CEDI"].filter(function(k){ return ESC_ID[k]; });
-  var min = Math.min.apply(null, ab.map(function(k){ return ESC_ID[k].costos.Total; }));
-  $("tiles-resumen").innerHTML = claves.map(function(k){
-    var e = ESC_ID[k], c = e.costos, best = ab.indexOf(k) >= 0 && Math.abs(c.Total - min) < 1;
-    return '<div class="tile' + (best ? " best" : "") + '"><div class="lab">' + esc(e.corto) + (best ? ' <span class="badge ok">mejor A vs B</span>' : "") +
-      '</div><div class="val">' + M(c.Total) + ' M</div><div class="sub">COP/mes · ' + NF.format(e.kpis.costo_por_m3) + ' COP/m3</div>' +
-      '<div class="split"><span>Transp. <b>' + M(c["Total transporte"]) + '</b></span><span>Almac. <b>' + M(c["Total almacenamiento"]) + '</b></span><span>Fijos <b>' + M(c["Total fijo nodos"]) + "</b></span></div></div>";
-  }).join("");
-  var b = ESC_ID.ASIS_REAL, c = ESC_ID.E3_OPTIMO || ESC[ESC.length - 1];
-  $("wf-res-tit").textContent = b.corto + " → " + c.corto;
-  waterfall("ch-wf-res", b.costos, c.costos, b.corto, c.corto, "comp");
-  var ids = ESC.map(function(e){ return e.id; }), nombres = ids.map(function(i){ return ESC_ID[i].corto; });
-  var f = function(i){ return ESC_ID[i].costos; };
-  barrasGrupo("ch-grupos", ids, nombres, f);
-  barrasComp("ch-costos", ids, nombres, f);
+  $("r-reco").innerHTML = D.resumen.reco.map(function(t){ return "<li>" + esc(t) + "</li>"; }).join("");
+  $("r-hall").innerHTML = D.resumen.hallazgos.map(function(t){ return "<li>" + esc(t) + "</li>"; }).join("");
+  var claves = ["S0_ACTUAL", "S2_SIN_PLANTA", "S3_OPTIMIZADO", "S4_BE_OBLIGATORIA", "S5_SIN_BE"].filter(function(k){ return RES[k]; });
+  var cerr = claves.filter(function(k){ return k !== "S0_ACTUAL"; }), mn = Math.min.apply(null, cerr.map(function(k){ return mes(RES[k], "Total"); }));
+  $("r-tiles").innerHTML = claves.map(function(k){ var r = RES[k], c = r.res.costos, kp = r.res.kpis, best = k !== "S0_ACTUAL" && Math.abs(mes(r, "Total") - mn) < 1;
+    var ocm = 0; Object.keys(r.res.nodos_dia).forEach(function(n){ ocm = Math.max(ocm, Math.max.apply(null, r.res.nodos_dia[n].ocupacion)); });
+    return '<div class="tile' + (best ? " best" : "") + '"><div class="lab">' + esc(r.nombre) + (best ? ' <span class="badge ok">menor costo</span>' : "") + "</div>" + tipoBadge(r.tipo) +
+      '<div class="val">' + M(mes(r, "Costo logístico (sin penalizaciones)")) + ' M</div><div class="sub">COP/mes de costo logístico' + (c["Total penalizaciones"] > 1 ? " · penalizaciones " + M(mes(r, "Total penalizaciones")) + " M" : "") + "</div>" +
+      '<div class="split"><span>Transp. <b>' + M(mes(r, "Total transporte")) + '</b></span><span>Almac. <b>' + M(mes(r, "Total almacenamiento")) + '</b></span><span>Fijos <b>' + M(mes(r, "Total fijo nodos")) + "</b></span></div>" +
+      '<div class="split"><span>Atendido <b>' + PF.format(kp.fill_rate) + '</b></span><span>En meta <b>' + PF.format(kp.pct_en_meta) + '</b></span><span>Ocup. máx. <b>' + PF.format(ocm) + "</b></span></div></div>"; }).join("");
+  var a = RES.S0_ACTUAL, b = RES.S3_OPTIMIZADO || RES[ORDEN[1]];
+  $("r-wf-tit").textContent = a.nombre + " → " + b.nombre;
+  waterfall("r-wf", a.res.costos, b.res.costos, "Actual", "Optimizado", "comp", a.res.H, b.res.H);
+  var C = D.combos || [];
+  if (C.length){ var mnc = Math.min.apply(null, C.map(function(f){ return f.total_mes; }));
+    plot("r-combos", [["Transporte", "transporte_mes", 0], ["Almacenamiento variable", "alm_var", 2], ["Fijo bodegas externas", "fijo_be_mes", 5], ["Penalizaciones", "penalizaciones_mes", 7]].map(function(s){
+      return {type: "bar", orientation: "h", name: s[0], y: C.map(function(f){ return f.combinacion; }), x: C.map(function(f){ return (s[1] === "alm_var" ? f.almacenamiento_mes - f.fijo_be_mes : f[s[1]]) / 1e6; }),
+        marker: {color: serie(s[2]), line: {color: css("--surface"), width: 2}}, hovertemplate: "%{y}<br>" + s[0] + ": %{x:,.0f} M COP/mes<extra></extra>"}; }).concat([{type: "scatter", mode: "text",
+      y: C.map(function(f){ return f.combinacion; }), x: C.map(function(f){ return (f.total_mes - f.fijo_nodos_mes) / 1e6; }), text: C.map(function(f){ return " " + M(f.total_mes) + (Math.abs(f.total_mes - mnc) < 1 ? " ✓" : " (+" + M(f.total_mes - mnc) + ")"); }),
+      textposition: "middle right", textfont: {color: css("--ink")}, showlegend: false, hoverinfo: "skip", cliponaxis: false}]),
+      {barmode: "stack", bargap: 0.3, margin: {l: 230, r: 120, b: 50, t: 40}, yaxis: {autorange: "reversed"}, legend: {y: 1.02, yanchor: "bottom", x: 0},
+       xaxis: {title: {text: "Millones COP / mes (sin fijos de plantas/CEDI, iguales en todas)"}}}); }
+  var r = b.res, H = r.H, tot = {inv: [], prod: [], dem: r.demanda_dia};
+  for (var t = 0; t < H; t++){ var iv = 0, pr = 0; Object.keys(r.nodos_dia).forEach(function(n){ iv += r.nodos_dia[n].inv_fin[t]; pr += r.nodos_dia[n].produccion[t]; }); tot.inv.push(iv); tot.prod.push(pr); }
+  plot("r-dia", [{type: "scatter", mode: "lines+markers", name: "Demanda (despachos)", x: r.fechas, y: tot.dem, line: {color: serie(1), width: 2}, marker: {size: 6}},
+    {type: "scatter", mode: "lines+markers", name: "Producción", x: r.fechas, y: tot.prod, line: {color: serie(0), width: 2}, marker: {size: 6}},
+    {type: "scatter", mode: "lines", name: "Inventario total de la red (eje derecho)", x: r.fechas, y: tot.inv, line: {color: serie(2), width: 2, dash: "dot"}, yaxis: "y2"}],
+    {yaxis: {title: {text: "m3 / día"}}, yaxis2: {title: {text: "Inventario m3"}, overlaying: "y", side: "right", rangemode: "tozero", showgrid: false, tickfont: {color: css("--muted")}}, margin: {r: 70}});
 };
 
-/* ---------------------------------------------------------------- CALIDAD */
-renderers.calidad = function(){
-  var Q = D.calidad, I = D.imputacion;
-  var cuenta = function(s){ return Q.filter(function(r){ return r.Severidad === s; }).length; };
-  $("tiles-calidad").innerHTML = [
-    ["Validaciones ejecutadas", NF.format(Q.length), "SAP, TMS y 7 maestros"], ["Severidad alta", NF.format(cuenta("Alta")), "afectan el cálculo; se trataron"],
-    ["Severidad media", NF.format(cuenta("Media")), ""], ["Match SAP–TMS por viaje", PF.format(D.meta.match_tms), "tras normalizar ceros a la izquierda"],
-    ["Líneas con flete válido", PF.format(D.meta.pct_flete_valido), "importe > " + D.meta.umbral + " COP"]
-  ].map(function(t){ return '<div class="tile"><div class="lab">' + t[0] + '</div><div class="val">' + t[1] + '</div><div class="sub">' + t[2] + "</div></div>"; }).join("");
-  var pct = I.vol_propia_mes / (I.vol_propia_mes + I.vol_tercero_mes);
-  $("tiles-imp").innerHTML = [
-    ["Viajes XI flota propia", NF.format(I.viajes_propia_base / D.meta.meses), "viajes/mes (periodo base)"],
-    ["Volumen flota propia", NF.format(I.vol_propia_mes) + " m3", PF.format(pct) + " del volumen XI"],
-    ["Imputado · viajes similares", M(I.imp_similar_mes) + " M", "COP/mes" + (I.metodo !== "km" ? " · método usado" : "")],
-    ["Imputado · por km", M(I.imp_km_mes) + " M", NF.format(I.costo_fijo_viaje_cop) + " fijo + " + NF.format(I.costo_km_cop) + " COP/km" + (I.metodo === "km" ? " · método usado" : "")],
-    ["XI terceros registrado", M(I.imp_tercero_mes) + " M", "COP/mes en SAP"]
-  ].map(function(t){ return '<div class="tile"><div class="lab">' + t[0] + '</div><div class="val">' + t[1] + '</div><div class="sub">' + t[2] + "</div></div>"; }).join("");
-  var V = D.viajes_xi.filter(function(r){ return r.origen !== r.destino; }).slice(0, 12);
-  var et = V.map(function(r){ return r.origen + " → " + r.destino; });
-  plot("ch-imp", [{type: "bar", orientation: "h", name: "Viajes similares", y: et, x: V.map(function(r){ return r.imp_similar/1e6; }), marker: {color: serie(0)},
-      hovertemplate: "%{y}<br>similares: %{x:,.1f} M COP/mes<extra></extra>"},
-    {type: "bar", orientation: "h", name: "Por km", y: et, x: V.map(function(r){ return r.imp_km/1e6; }), marker: {color: serie(1)},
-      hovertemplate: "%{y}<br>por km: %{x:,.1f} M COP/mes<extra></extra>"}],
-    {barmode: "group", bargap: 0.3, margin: {l: 110}, yaxis: {autorange: "reversed"}, xaxis: {title: {text: "Flete imputado (M COP / mes)"}}});
-  tabla("tb-imp", [{t: "Ruta", k: "ruta"}, {t: "Viajes/mes", k: "viajes", n: 1, fmt: function(v){ return NF1.format(v); }}, {t: "m3/mes", k: "m3", n: 1, sum: 1},
-    {t: "km", k: "km", n: 1}, {t: "Similares M", k: "imp_similar", n: 1, sum: 1, fmt: function(v){ return NF1.format(v/1e6); }},
-    {t: "Por km M", k: "imp_km", n: 1, sum: 1, fmt: function(v){ return NF1.format(v/1e6); }}, {t: "Base similar", k: "fuente"}],
-    D.viajes_xi.map(function(r){ return Object.assign({ruta: r.origen + " → " + r.destino}, r); }), {total: 1});
-  var ft = D.series.flete_tipo.slice().sort(function(a, b){ return a.pct_invalido - b.pct_invalido; });
-  plot("ch-flete", [{type: "bar", orientation: "h", y: ft.map(function(r){ return r.Tipo + (r.Tipo === "XI" ? " (traslado)" : ""); }),
-    x: ft.map(function(r){ return r.pct_invalido; }), marker: {color: serie(0)}, text: ft.map(function(r){ return PF.format(r.pct_invalido); }),
-    textposition: "outside", cliponaxis: false, textfont: {color: css("--ink2")}, customdata: ft.map(function(r){ return r.lineas; }),
-    hovertemplate: "Tipo %{y}<br>%{x:.1%} con flete 0/1<br>%{customdata:,} líneas<extra></extra>"}],
-    {xaxis: {tickformat: ".0%", range: [0, Math.max.apply(null, ft.map(function(r){ return r.pct_invalido; })) * 1.2]}, margin: {l: 110}, bargap: 0.35});
-  var fuentes = Array.from(new Set(Q.map(function(r){ return r.Fuente; }))), sevs = ["Alta","Media","Baja","OK"];
-  var colsev = {Alta: css("--crit"), Media: css("--warn"), Baja: css("--muted"), OK: css("--good")};
-  plot("ch-sev", sevs.map(function(s){ return {type: "bar", name: s, x: fuentes, y: fuentes.map(function(f){ return Q.filter(function(r){ return r.Fuente === f && r.Severidad === s; }).length; }),
-    marker: {color: colsev[s], line: {color: css("--surface"), width: 2}}, hovertemplate: "%{x}<br>" + s + ": %{y}<extra></extra>"}; }),
-    {barmode: "stack", bargap: 0.4, yaxis: {title: {text: "N.º de validaciones"}}});
-  var selF = $("f-fuente"), selS = $("f-sev"), txt = $("f-txt");
-  if (!selF.options.length){
-    selF.innerHTML = '<option value="">Todas las fuentes</option>' + fuentes.map(function(f){ return "<option>" + esc(f) + "</option>"; }).join("");
-    selS.innerHTML = '<option value="">Todas las severidades</option>' + sevs.map(function(f){ return "<option>" + f + "</option>"; }).join("");
-    [selF, selS, txt].forEach(function(e){ e.oninput = renderers.calidad; });
+/* ======================================================== 2 DIAGNOSTICO */
+renderers.diag = function(){
+  var A = RES.S0_ACTUAL, r = A.res, c = r.costos, kp = r.kpis;
+  $("d-tiles").innerHTML = [["Demanda atendida", NF.format(kp.demanda_m3 / r.H) + " m3/día", NF.format(kp.demanda_m3) + " m3 en " + r.H + " días"],
+    ["Costo logístico", M(mes(A, "Costo logístico (sin penalizaciones)")) + " M", "COP por mes equivalente"],
+    ["Transporte", M(mes(A, "Total transporte")) + " M", "XI terceros " + M(mes(A, "Traslado XI terceros")) + " · XI flota propia " + M(mes(A, "Traslado XI flota propia")) + " · distribución " + M(mes(A, "Distribución"))],
+    ["Almacenamiento", M(mes(A, "Total almacenamiento")) + " M", "manejo " + M(mes(A, "Manejo")) + " · fijo bodegas ext. " + M(mes(A, "Fijo bodegas externas"))],
+    ["Traslados XI", NF.format(kp.traslados_m3 / r.H) + " m3/día", PF.format(kp.traslados_m3 / kp.demanda_m3) + " del volumen despachado"],
+    ["Tiempo de entrega", NF1.format(kp.horas_promedio) + " h", PF.format(kp.pct_en_meta) + " dentro de la meta"]].map(function(t){
+      return '<div class="tile"><div class="lab">' + t[0] + '</div><div class="val">' + t[1] + '</div><div class="sub">' + t[2] + "</div></div>"; }).join("");
+  // segmentos
+  var seg = $("d-seg").value, agg = {};
+  r.asignacion_grupos.forEach(function(a){ var gr = BASE.grupos[a[2]], z = BASE.zonas[gr[0]];
+    var key = seg === "zona" ? (z.zona || "-") : seg === "ciudad" ? z.id : seg === "familia" ? BASE.familias[gr[1]] : (gr[4] ? "E · Exportación" : "N · Nacional");
+    var s = agg[key] = agg[key] || {seg: key, m3: 0, costo: 0, mh: 0, nodos: {}, plantas: {}, E: 0};
+    s.m3 += a[4]; s.costo += a[5]; s.mh += a[4] * a[6]; s.E += a[7]; s.nodos[NODOS[a[0]].id] = (s.nodos[NODOS[a[0]].id] || 0) + a[4]; s.plantas[NODOS[gr[2]].id] = (s.plantas[NODOS[gr[2]].id] || 0) + a[4]; });
+  var top = function(o, tot){ return Object.keys(o).sort(function(a, b){ return o[b] - o[a]; }).slice(0, 3).map(function(k){ return k + " " + PF.format(o[k] / tot); }).join(", "); };
+  tabla("d-tabla-seg", [{t: "Segmento", k: "seg"}, {t: "m3/día", k: "dia", n: 1, sum: 1, fmt: function(v){ return NF1.format(v); }}, {t: "% exportación", k: "pE", n: 1, fmt: function(v){ return v == null ? "" : PF.format(v); }},
+    {t: "Despachado desde (CEDI)", k: "nodos"}, {t: "Producido en (planta)", k: "plantas"}, {t: "Distribución COP/m3", k: "cu", n: 1}, {t: "Horas promedio", k: "h", n: 1, fmt: function(v){ return v == null ? "" : NF1.format(v); }}],
+    Object.keys(agg).map(function(k){ var s = agg[k]; return {seg: s.seg, dia: s.m3 / r.H, pE: s.E / s.m3, nodos: top(s.nodos, s.m3), plantas: top(s.plantas, s.m3), cu: s.costo / s.m3, h: s.mh / s.m3}; })
+      .sort(function(a, b){ return b.dia - a.dia; }), {total: 1, max: 400});
+  var sel = $("d-nodo"); if (!sel.options.length){ var ids = Object.keys(r.nodos_dia).filter(function(n){ return r.nodos_dia[n].pos_m3 > 0; });
+    sel.innerHTML = ids.map(function(n){ return '<option value="' + n + '"' + (["CO01", "CO02", "CO03", "CO10", "CO14"].indexOf(n) >= 0 ? " selected" : "") + ">" + n + "</option>"; }).join(""); sel.onchange = renderers.diag; $("d-seg").onchange = renderers.diag; }
+  var elegidos = Array.from(sel.selectedOptions).map(function(o){ return o.value; });
+  plot("d-ocup", elegidos.map(function(n){ return {type: "scatter", mode: "lines+markers", name: n, x: r.fechas, y: r.nodos_dia[n].ocupacion, line: {color: colorNodo(n), width: 2}, marker: {size: 6},
+    hovertemplate: n + " %{x}<br>%{y:.0%}<extra></extra>"}; }), {yaxis: {tickformat: ".0%", title: {text: "Inventario / posiciones"}},
+    shapes: [{type: "line", xref: "paper", x0: 0, x1: 1, y0: A.prm.utilizacion_maxima, y1: A.prm.utilizacion_maxima, line: {color: css("--crit"), width: 1}}],
+    annotations: [{xref: "paper", x: 0, y: A.prm.utilizacion_maxima, text: "utilización máxima", showarrow: false, xanchor: "left", yanchor: "bottom", font: {color: css("--ink2")}}]});
+  var pr = [], de = [];
+  for (var t = 0; t < r.H; t++){ var a = 0, b = 0; Object.keys(r.nodos_dia).forEach(function(n){ a += r.nodos_dia[n].produccion[t]; b += r.nodos_dia[n].despachos[t]; }); pr.push(a); de.push(b); }
+  plot("d-prod", [{type: "scatter", mode: "lines+markers", name: "Producción estimada", x: r.fechas, y: pr, line: {color: serie(0), width: 2, dash: undefined}, marker: {size: 6}},
+    {type: "scatter", mode: "lines+markers", name: "Despachos observados", x: r.fechas, y: de, line: {color: serie(1), width: 2}, marker: {size: 6}}], {yaxis: {title: {text: "m3 / día"}}});
+  tabla("d-xi", [{t: "Origen", k: "o"}, {t: "Destino", k: "d"}, {t: "m3/día", k: "m3", n: 1, sum: 1, fmt: function(v){ return NF1.format(v); }}, {t: "Terceros M/mes", k: "terc", n: 1, sum: 1, fmt: function(v){ return NF1.format(v); }},
+    {t: "Flota propia M/mes", k: "prop", n: 1, sum: 1, fmt: function(v){ return NF1.format(v); }}, {t: "Tránsito (días)", k: "L", n: 1}],
+    (function(){ var o = {}; r.traslados.forEach(function(x){ var k = x[0] + "|" + x[1], q = o[k] = o[k] || {o: NODOS[x[0]].id, d: x[1] >= 0 ? NODOS[x[1]].id : "Externo", m3: 0, terc: 0, prop: 0, L: x[6]};
+      q.m3 += x[3] / r.H; q.terc += x[4] * 30 / r.H / 1e6; q.prop += x[5] * 30 / r.H / 1e6; }); return Object.keys(o).map(function(k){ return o[k]; }); })(), {total: 1});
+  tabla("d-alertas", [{t: "Tipo", k: "tipo", fmt: function(v){ return '<span class="sev ' + String(v).split(" ")[0] + '"><i></i>' + esc(v) + "</span>"; }}, {t: "Nodo", k: "nodo"}, {t: "Detalle", k: "detalle"}], r.diagnostico);
+  var Q = D.calidad;
+  $("d-cal-tiles").innerHTML = [["Validaciones", Q.length, ""], ["Severidad alta", Q.filter(function(x){ return x.Severidad === "Alta"; }).length, "tratadas en el modelo"],
+    ["Match SAP–TMS", PF.format(D.meta.match_tms), "tras normalizar el viaje"], ["Líneas con flete válido", PF.format(D.meta.pct_flete_valido), "importe > 1 COP"]].map(function(t){
+      return '<div class="tile"><div class="lab">' + t[0] + '</div><div class="val">' + t[1] + '</div><div class="sub">' + t[2] + "</div></div>"; }).join("");
+  var sv = $("d-cal-sev"), tx = $("d-cal-txt"); sv.oninput = tx.oninput = renderers.diag; var q = tx.value.toLowerCase();
+  tabla("d-cal", [{t: "Fuente", k: "Fuente"}, {t: "Validación", k: "Validación"}, {t: "Resultado", k: "Resultado"}, {t: "Severidad", k: "Severidad", fmt: function(v){ return '<span class="sev ' + v + '"><i></i>' + v + "</span>"; }},
+    {t: "Tratamiento", k: "Tratamiento en el modelo"}], Q.filter(function(x){ return (!sv.value || x.Severidad === sv.value) && (!q || JSON.stringify(x).toLowerCase().indexOf(q) >= 0); }));
+  tabla("d-imp", [{t: "Ruta", k: "ruta"}, {t: "Viajes/mes", k: "viajes", n: 1, fmt: function(v){ return NF1.format(v); }}, {t: "m3/mes", k: "m3", n: 1, sum: 1}, {t: "km", k: "km", n: 1},
+    {t: "Viajes similares M", k: "imp_similar", n: 1, sum: 1, fmt: function(v){ return NF1.format(v / 1e6); }}, {t: "Por km M", k: "imp_km", n: 1, sum: 1, fmt: function(v){ return NF1.format(v / 1e6); }}, {t: "Base", k: "fuente"}],
+    D.viajes_xi.map(function(x){ return Object.assign({ruta: x.origen + " → " + x.destino}, x); }), {total: 1});
+};
+
+/* ======================================================== 3 SIMULACION */
+var PRM = null;
+var CAMPOS = {
+  "f-dem": [["horizonte_dias", "Horizonte (días)", "num", "Días que se optimizan (máx. " + BASE.meta.fechas.length + ")"], ["desplazamiento", "Inicio dentro de la ventana (día)", "num", "0 = " + BASE.meta.fechas[0]],
+    ["proyeccion", "Proyección de demanda", [["replica", "Réplica de la ventana histórica"], ["perfil", "Perfil promedio por día de semana"]], "Escenario configurable, no pronóstico estadístico"],
+    ["crecimiento", "Crecimiento global (fracción)", "num", "0,10 = +10 %"], ["crec_N", "Crecimiento adicional nacional", "num", ""], ["crec_E", "Crecimiento adicional exportación", "num", ""]],
+  "f-red": [["planta_cerrada", "Planta que deja de operar", [["", "Ninguna"]].concat(NODOS.filter(function(n){ return n.es_planta; }).map(function(n){ return [n.id, n.id + " " + n.ciudad]; })), ""],
+    ["asignacion", "Atención de clientes", [["libre", "El modelo decide desde qué nodo"], ["historica", "Mantener los CEDI históricos"]], ""],
+    ["produccion.modo", "Producción", [["plan", "Plan estable (dato)"], ["flexible", "Flexible: el modelo decide dentro de la capacidad"]], "Supuesto: no hay datos de producción"],
+    ["produccion.dias_semana", "Días de producción por semana", "num", "6 = lunes a sábado"], ["produccion.factor", "Producción / demanda del horizonte", "num", "1 = produce lo que se vende"],
+    ["usar_reparto", "Personalizar reparto de la planta cerrada", "chk", ""]],
+  "f-inv": [["inventario.dias_inicial_planta", "Inventario inicial en planta (días)", "num", "Supuesto"], ["inventario.dias_inicial_cedi", "Inventario inicial en CEDI (días)", "num", "Supuesto"],
+    ["inventario.dias_seguridad", "Stock de seguridad (días)", "num", "0 = sin stock de seguridad"], ["inventario.final_min", "Inventario final mínimo / inicial", "num", "1 = la red termina como empezó"], ["inventario.final_por_nodo", "Inventario final exigido por nodo (cobertura de la demanda que atiende)", "chk", ""],
+    ["inventario.ocupacion_inicial_max", "Ocupación inicial máxima", "num", ""], ["utilizacion_maxima", "Utilización máxima de posiciones", "num", "Capacidad = posiciones × m3/pos × este valor"],
+    ["costo_capital_dia", "Costo financiero (COP por m3·día)", "num", "0 = no se incluye"]],
+  "f-tra": [["transporte.metodo", "Costo de la flota propia", [["similares", "Tarifa de viajes similares de terceros"], ["km", "Costo fijo + COP/km"]], ""], ["transporte.costo_km", "COP por km (flota propia)", "num", ""],
+    ["transporte.fijo_viaje", "Costo fijo por viaje (flota propia)", "num", ""], ["transporte.s_propia", "Participación flota propia", [["", "Histórica por ruta"], ["0", "0 %"], ["0.5", "50 %"], ["1", "100 %"]], ""],
+    ["transporte.f_terc", "Factor tarifa XI terceros", "num", ""], ["transporte.f_prop", "Factor costo flota propia", "num", ""], ["transporte.f_dist", "Factor tarifa distribución", "num", ""],
+    ["traslados", "Traslados permitidos", [["solo_plantas", "Solo desde plantas"], ["plantas_y_observados", "Plantas + rutas observadas + bodegas"], ["todos", "Todos los pares de nodos"]], ""]],
+  "f-srv": [["servicio.lmax_h", "Tiempo máximo de entrega (h)", "num", "Vacío = sin restricción"], ["servicio.meta_h", "Meta de entrega (h)", "num", ""], ["servicio.pen_hora", "Penalización COP/m3·h sobre la meta", "num", ""],
+    ["holguras.atraso", "Permitir atrasos (penalizados)", "chk", ""], ["holguras.pen_atraso", "COP por m3·día de atraso", "num", ""], ["holguras.pen_no_atendido", "COP por m3 no atendido", "num", "≈ venta perdida"],
+    ["holguras.exceso", "Permitir exceso de capacidad (penalizado)", "chk", ""], ["holguras.pen_exceso", "COP por m3·día sobre capacidad", "num", ""], ["holguras.pen_stock_seguridad", "COP por m3·día bajo stock de seguridad", "num", ""]]
+};
+function getP(o, p){ return p.split(".").reduce(function(a, k){ return a == null ? a : a[k]; }, o); }
+function setP(o, p, v){ var ks = p.split("."), last = ks.pop(); ks.reduce(function(a, k){ return a[k] = a[k] || {}; }, o)[last] = v; }
+function formulario(){
+  Object.keys(CAMPOS).forEach(function(id){ $(id).innerHTML = CAMPOS[id].map(function(c, i){ var v = getP(PRM, c[0]), inp;
+    if (c[2] === "num") inp = '<input type="number" step="any" data-p="' + c[0] + '" value="' + (v == null ? "" : v) + '">';
+    else if (c[2] === "chk") return '<label class="chk"><input type="checkbox" data-p="' + c[0] + '"' + (v ? " checked" : "") + "> " + c[1] + "</label>";
+    else inp = '<select data-p="' + c[0] + '">' + c[2].map(function(o){ return '<option value="' + o[0] + '"' + (String(v == null ? "" : v) === o[0] ? " selected" : "") + ">" + esc(o[1]) + "</option>"; }).join("") + "</select>";
+    return "<label>" + c[1] + inp + (c[3] ? "<small>" + esc(c[3]) + "</small>" : "") + "</label>"; }).join(""); });
+  document.querySelectorAll("#t-sim [data-p]").forEach(function(el){ el.onchange = function(){ var p = el.dataset.p, v;
+    if (el.type === "checkbox") v = el.checked; else if (el.type === "number") v = el.value === "" ? null : +el.value;
+    else v = el.value === "" ? (p === "planta_cerrada" || p === "transporte.s_propia" ? null : "") : (p === "transporte.s_propia" ? +el.value : el.value);
+    setP(PRM, p, v); }; });
+  $("f-rep").innerHTML = NODOS.filter(function(n){ return n.es_planta && n.id !== PRM.planta_cerrada; }).map(function(n){
+    return "<label>" + n.id + " " + n.ciudad + ' (%)<input type="number" step="any" data-rep="' + n.id + '" value="' + Math.round(100 * ((PRM.reparto || {})[n.id] || 0)) + '"></label>'; }).join("");
+  document.querySelectorAll("[data-rep]").forEach(function(el){ el.onchange = function(){ PRM.reparto = PRM.reparto || {}; PRM.reparto[el.dataset.rep] = (+el.value || 0) / 100; }; });
+  var zonas = Array.from(new Set(BASE.zonas.map(function(z){ return z.zona; }).filter(Boolean))).sort();
+  $("f-zona").innerHTML = "<thead><tr><th>Zona</th><th class='n'>Crecimiento %</th></tr></thead><tbody>" + zonas.map(function(z){ return "<tr><td>" + esc(z) + "</td><td class='n'><input type='number' class='chico' data-cz='" + esc(z) + "' value='" + Math.round(100 * ((PRM.crec_zona || {})[z] || 0)) + "'></td></tr>"; }).join("") + "</tbody>";
+  $("f-fam").innerHTML = "<thead><tr><th>Familia</th><th class='n'>Crecimiento %</th></tr></thead><tbody>" + BASE.familias.map(function(f){ return "<tr><td>" + esc(f) + "</td><td class='n'><input type='number' class='chico' data-cf='" + esc(f) + "' value='" + Math.round(100 * ((PRM.crec_familia || {})[f] || 0)) + "'></td></tr>"; }).join("") + "</tbody>";
+  $("f-fz").innerHTML = "<thead><tr><th>Zona</th><th class='n'>Factor tarifa</th></tr></thead><tbody>" + zonas.map(function(z){ return "<tr><td>" + esc(z) + "</td><td class='n'><input type='number' class='chico' step='0.05' data-fz='" + esc(z) + "' value='" + ((PRM.transporte.f_zona || {})[z] || 1) + "'></td></tr>"; }).join("") + "</tbody>";
+  document.querySelectorAll("[data-cz]").forEach(function(el){ el.onchange = function(){ PRM.crec_zona = PRM.crec_zona || {}; PRM.crec_zona[el.dataset.cz] = (+el.value || 0) / 100; }; });
+  document.querySelectorAll("[data-cf]").forEach(function(el){ el.onchange = function(){ PRM.crec_familia = PRM.crec_familia || {}; PRM.crec_familia[el.dataset.cf] = (+el.value || 0) / 100; }; });
+  document.querySelectorAll("[data-fz]").forEach(function(el){ el.onchange = function(){ PRM.transporte.f_zona = PRM.transporte.f_zona || {}; PRM.transporte.f_zona[el.dataset.fz] = +el.value || 1; }; });
+  var tipoN = {planta: "Planta + CEDI", cedi: "CEDI propio", "3pl": "CEDI 3PL", bodega_externa: "Bodega externa actual", candidata: "Bodega externa candidata"};
+  $("f-nodos").innerHTML = "<thead><tr><th>Nodo</th><th>Tipo</th><th>Modo</th><th class='n'>Posiciones</th><th class='n'>Manejo salida COP/m3</th><th class='n'>Manejo entrada COP/m3</th><th class='n'>Almacenaje COP/m3·día</th><th class='n'>Costo fijo COP/mes</th></tr></thead><tbody>" +
+    NODOS.map(function(n){ var p = PRM.nodos[n.id] || {}; return "<tr><td>" + esc(n.nombre) + "</td><td>" + tipoN[n.tipo] + "</td><td><select data-n='" + n.id + "' data-k='modo'>" +
+      ["fijo", "opcional", "forzado", "cerrado"].map(function(m){ return "<option" + (p.modo === m ? " selected" : "") + ">" + m + "</option>"; }).join("") + "</select></td>" +
+      ["posiciones", "manejo_salida", "manejo_entrada", "almac_dia", "costo_fijo_mes"].map(function(k){ return "<td class='n'><input type='number' step='any' data-n='" + n.id + "' data-k='" + k + "' value='" + Math.round((p[k] != null ? p[k] : n[k]) * 100) / 100 + "'></td>"; }).join("") + "</tr>"; }).join("") + "</tbody>";
+  document.querySelectorAll("[data-n]").forEach(function(el){ el.onchange = function(){ PRM.nodos[el.dataset.n] = PRM.nodos[el.dataset.n] || {}; PRM.nodos[el.dataset.n][el.dataset.k] = el.tagName === "SELECT" ? el.value : +el.value; }; });
+}
+var HIGHS = null;
+function b64(s){ var bin = atob(s.trim()), u = new Uint8Array(bin.length); for (var i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i); return u; }
+function highs(){ if (HIGHS) return Promise.resolve(HIGHS); var bytes = b64($("wasm").textContent);
+  return window.cargarHiGHSModulo({wasmBinary: bytes, locateFile: function(f){ return f; },
+    instantiateWasm: function(imports, listo){ WebAssembly.instantiate(bytes, imports).then(function(r){ listo(r.instance, r.module); }); return {}; }}).then(function(h){ HIGHS = h; return h; }); }
+function validarPRM(p){ var err = [];
+  if (!(p.horizonte_dias >= 1)) err.push("El horizonte debe ser al menos 1 día.");
+  if (p.horizonte_dias + (p.desplazamiento || 0) > BASE.meta.fechas.length) err.push("Horizonte + inicio supera la ventana de " + BASE.meta.fechas.length + " días (se recortará).");
+  if (!(p.utilizacion_maxima > 0 && p.utilizacion_maxima <= 1)) err.push("La utilización máxima debe estar entre 0 y 1.");
+  Object.keys(p.nodos).forEach(function(n){ if (p.nodos[n].posiciones < 0) err.push("Posiciones negativas en " + n + "."); });
+  return err; }
+var nSim = 0;
+renderers.sim = function(){
+  if (!PRM){ PRM = clone(RES.S7_PARAMETRIZADO ? RES.S7_PARAMETRIZADO.prm : RES[ORDEN[1]].prm);
+    opciones("s-base", ORDEN.filter(function(id){ return RES[id].prm && RES[id].res.tipo !== "historico"; }).map(function(id){ return [id, RES[id].nombre]; }), RES.S7_PARAMETRIZADO ? "S7_PARAMETRIZADO" : ORDEN[1]);
+    formulario();
+    $("s-cargar").onclick = function(){ PRM = clone(RES[$("s-base").value].prm); delete PRM.extra; formulario(); $("s-estado").textContent = "Parámetros de «" + RES[$("s-base").value].nombre + "» cargados."; };
+    $("s-run").onclick = function(){ var err = validarPRM(PRM); if (err.length && err.some(function(e){ return e.indexOf("recortará") < 0; })){ $("s-estado").textContent = "⚠ " + err.join(" "); return; }
+      var btn = this; btn.disabled = true; $("s-estado").textContent = "Optimizando... (cargando solver)";
+      setTimeout(function(){ highs().then(function(h){ $("s-estado").textContent = "Optimizando...";
+        setTimeout(function(){ try { var p = clone(PRM), r = MotorRed.resolver(h, BASE, p, {gap: 1e-3, tiempo: 240}); nSim++;
+          var id = "SIM_" + nSim, nom = ($("s-nombre").value || "Parametrizado") + (nSim > 1 ? " #" + nSim : "");
+          if (r.estado === "Optimal" || r.nodos_dia && Object.keys(r.nodos_dia).length) agregarEscenario(id, nom, p, r);
+          $("s-estado").textContent = "Estado: " + r.estado + " · " + NF.format(r.variables || 0) + " variables · " + NF.format(r.restricciones || 0) + " restricciones · " + NF1.format(r.tiempo_s) + " s" + (err.length ? " · " + err.join(" ") : "");
+          mostrarSim(id, r); } catch (e) { $("s-estado").textContent = "Error: " + e.message; } btn.disabled = false; }, 30); }).catch(function(e){ $("s-estado").textContent = "No se pudo cargar el solver: " + e.message; btn.disabled = false; }); }, 30); };
   }
-  var q = txt.value.toLowerCase();
-  tabla("tb-calidad", [{t: "Fuente", k: "Fuente"}, {t: "Validación", k: "Validación"}, {t: "Resultado", k: "Resultado"},
-    {t: "% afectado", k: "% afectado", n: 1, fmt: function(v){ return PF.format(v); }},
-    {t: "Severidad", k: "Severidad", fmt: function(v){ return '<span class="sev ' + v + '"><i></i>' + v + "</span>"; }},
-    {t: "Tratamiento en el modelo", k: "Tratamiento en el modelo"}],
-    Q.filter(function(r){ return (!selF.value || r.Fuente === selF.value) && (!selS.value || r.Severidad === selS.value) && (!q || JSON.stringify(r).toLowerCase().indexOf(q) >= 0); }));
+};
+function mostrarSim(id, r){
+  $("s-res").style.display = "block"; var R = RES[id];
+  if (!R){ $("s-tiles").innerHTML = ""; tabla("s-diag", [{t: "Tipo", k: "tipo"}, {t: "Detalle", k: "detalle"}], r.diagnostico); return; }
+  var ref = RES.S3_OPTIMIZADO;
+  $("s-tiles").innerHTML = [["Costo logístico", M(mes(R, "Costo logístico (sin penalizaciones)")) + " M/mes", ref ? "vs optimizado " + (mes(R, "Costo logístico (sin penalizaciones)") >= mes(ref, "Costo logístico (sin penalizaciones)") ? "+" : "") + M(mes(R, "Costo logístico (sin penalizaciones)") - mes(ref, "Costo logístico (sin penalizaciones)")) + " M" : ""],
+    ["Penalizaciones", M(mes(R, "Total penalizaciones")) + " M/mes", "incumplimientos (no son costo real)"], ["Demanda atendida", PF.format(r.kpis.fill_rate), NF.format(r.kpis.no_atendido_m3) + " m3 sin atender"],
+    ["Bodegas externas abiertas", (r.kpis.bodegas_abiertas || []).join(", ") || "Ninguna", "exceso máx. " + NF.format(r.kpis.exceso_max_m3) + " m3"], ["Balance de flujo", r.kpis.residuo_balance < 1e-3 ? "✓ cuadra" : "revisar", "residuo " + r.kpis.residuo_balance.toExponential(1) + " m3"]]
+    .map(function(t){ return '<div class="tile"><div class="lab">' + t[0] + '</div><div class="val">' + t[1] + '</div><div class="sub">' + t[2] + "</div></div>"; }).join("");
+  tabla("s-diag", [{t: "Tipo", k: "tipo", fmt: function(v){ return '<span class="sev ' + String(v).split(" ")[0] + '"><i></i>' + esc(v) + "</span>"; }}, {t: "Nodo", k: "nodo"}, {t: "Restricción activa / causa", k: "detalle"}],
+    r.diagnostico.length ? r.diagnostico : [{tipo: "OK", nodo: "-", detalle: "Sin restricciones violadas ni holguras activas."}]);
+  var ids = Object.keys(r.nodos_dia).filter(function(n){ return r.nodos_dia[n].pos_m3 > 0 && Math.max.apply(null, r.nodos_dia[n].inv_fin) > 1; });
+  plot("s-ocup", ids.map(function(n){ return {type: "scatter", mode: "lines", name: n, x: r.fechas, y: r.nodos_dia[n].ocupacion, line: {color: colorNodo(n), width: 2}}; }),
+    {yaxis: {tickformat: ".0%", title: {text: "Ocupación diaria"}}, shapes: [{type: "line", xref: "paper", x0: 0, x1: 1, y0: R.prm.utilizacion_maxima, y1: R.prm.utilizacion_maxima, line: {color: css("--crit"), width: 1}}]});
+}
+
+/* ======================================================== 4 ESCENARIOS */
+var SEL = {S0_ACTUAL: 1, S2_SIN_PLANTA: 1, S3_OPTIMIZADO: 1, S4_BE_OBLIGATORIA: 1, S5_SIN_BE: 1};
+renderers.esc = function(){
+  $("e-sel").innerHTML = ORDEN.map(function(id){ return '<label><input type="checkbox" data-s="' + id + '"' + (SEL[id] ? " checked" : "") + "> " + esc(RES[id].nombre) + " " + tipoBadge(RES[id].tipo) + "</label>"; }).join("");
+  document.querySelectorAll("[data-s]").forEach(function(el){ el.onchange = function(){ if (el.checked) SEL[el.dataset.s] = 1; else delete SEL[el.dataset.s]; renderers.esc(); }; });
+  var ids = ORDEN.filter(function(id){ return SEL[id]; }); if (!ids.length) return;
+  var filas = [["Costo logístico (sin penalizaciones)", "Costo logístico", "c"], ["Total transporte", "· Transporte", "c"], ["Traslado XI terceros", "   XI terceros", "c"], ["Traslado XI flota propia", "   XI flota propia", "c"],
+    ["Distribución", "   Distribución", "c"], ["Total almacenamiento", "· Almacenamiento", "c"], ["Manejo", "   Manejo", "c"], ["Almacenaje", "   Almacenaje", "c"], ["Fijo bodegas externas", "   Fijo bodegas externas", "c"],
+    ["Total fijo nodos", "· Fijos plantas/CEDI", "c"], ["Total penalizaciones", "Penalizaciones (incumplimientos)", "c"], ["Total", "Total (con penalizaciones)", "c"],
+    ["fill_rate", "Demanda atendida", "p"], ["pct_en_meta", "Volumen en meta de entrega", "p"], ["horas_promedio", "Horas promedio de entrega", "h"], ["traslados_m3", "Traslados XI (m3/día)", "d"],
+    ["exceso_max_m3", "Exceso máx. de capacidad (m3)", "m"], ["no_atendido_m3", "No atendido (m3)", "m"], ["ocmax", "Ocupación máxima de un nodo", "p"], ["bod", "Bodegas externas abiertas", "t"], ["estado", "Estado de la solución", "t"]];
+  var h = "<thead><tr><th>Indicador</th>" + ids.map(function(id){ return '<th class="n">' + esc(RES[id].nombre) + "<br>" + tipoBadge(RES[id].tipo) + "</th>"; }).join("") + "</tr></thead><tbody>";
+  filas.forEach(function(f){ h += "<tr><td" + (f[1].indexOf("   ") === 0 ? ' style="padding-left:22px;color:var(--ink2)"' : ' style="font-weight:600"') + ">" + esc(f[1].trim()) + "</td>" + ids.map(function(id){ var r = RES[id].res, v;
+    if (f[2] === "c") v = NF1.format(mes(RES[id], f[0]) / 1e6); else if (f[0] === "ocmax"){ var o = 0; Object.keys(r.nodos_dia).forEach(function(n){ o = Math.max(o, Math.max.apply(null, r.nodos_dia[n].ocupacion)); }); v = PF.format(o); }
+    else if (f[0] === "bod") v = (r.kpis.bodegas_abiertas || []).join(", ") || "—"; else if (f[0] === "estado") v = r.estado; else if (f[2] === "p") v = PF.format(r.kpis[f[0]]);
+    else if (f[2] === "h") v = NF1.format(r.kpis[f[0]]); else if (f[2] === "d") v = NF.format(r.kpis[f[0]] / r.H); else v = NF.format(r.kpis[f[0]]);
+    return '<td class="n">' + v + "</td>"; }).join("") + "</tr>"; });
+  $("e-kpi").innerHTML = h + "</tbody>";
+  if (!$("e-wb").options.length || desact.esc){ opciones("e-wb", lista(), $("e-wb").value || "S0_ACTUAL"); opciones("e-wc", lista(), $("e-wc").value || "S3_OPTIMIZADO");
+    opciones("e-rs", lista(), $("e-rs").value || "S3_OPTIMIZADO"); desact.esc = 0;
+    ["e-wb", "e-wc", "e-wd", "e-nodo", "e-met", "e-cn", "e-cz", "e-cf", "e-cc", "e-ca", "e-rs", "e-rn"].forEach(function(i){ $(i).onchange = renderers.esc; }); }
+  var A = RES[$("e-wb").value], B = RES[$("e-wc").value];
+  waterfall("e-wf", A.res.costos, B.res.costos, A.nombre, B.nombre, $("e-wd").value, A.res.H, B.res.H);
+  barrasGrupo("e-grupos", ids);
+  var nodosT = {}; ids.forEach(function(id){ Object.keys(RES[id].res.nodos_dia).forEach(function(n){ nodosT[n] = 1; }); });
+  if (!$("e-nodo").options.length) opciones("e-nodo", [["__RED__", "Red completa (suma)"]].concat(Object.keys(nodosT).map(function(n){ return [n, n]; })), "CO01");
+  var nodo = $("e-nodo").value, met = $("e-met").value;
+  plot("e-dia", ids.map(function(id, j){ var r = RES[id].res, y;
+    if (nodo === "__RED__"){ y = r.fechas.map(function(_, t){ var s = 0, cp = 0; Object.keys(r.nodos_dia).forEach(function(n){ var d = r.nodos_dia[n]; s += met === "ocupacion" ? d.inv_fin[t] : d[met][t]; cp += d.pos_m3; }); return met === "ocupacion" ? s / cp : s; }); }
+    else y = r.nodos_dia[nodo] ? r.nodos_dia[nodo][met] : r.fechas.map(function(){ return null; });
+    return {type: "scatter", mode: "lines+markers", name: RES[id].nombre, x: r.fechas, y: y, line: {color: serie(j), width: 2}, marker: {size: 6}}; }),
+    {yaxis: met === "ocupacion" ? {tickformat: ".0%"} : {title: {text: "m3"}}, legend: {y: -0.18, yanchor: "top"}, margin: {b: 90}});
+  // clientes que cambian de origen
+  var zonas = Array.from(new Set(BASE.zonas.map(function(z){ return z.zona; }).filter(Boolean))).sort();
+  if (!$("e-cz").options.length){ opciones("e-cz", [["", "Todas"]].concat(zonas.map(function(z){ return [z, z]; })), ""); opciones("e-cf", [["", "Todas"]].concat(BASE.familias.map(function(f, i){ return [String(i), f]; })), ""); }
+  var nivel = $("e-cn").value, fz = $("e-cz").value, ff = $("e-cf").value, cerr = (B.prm && B.prm.planta_cerrada) || D.meta.cerrada;
+  function porCliente(id){ var o = {};
+    flujos(id).forEach(function(f){ var gr = BASE.grupos[f[2]], z = BASE.zonas[gr[0]];
+      if (fz && z.zona !== fz) return; if (ff !== "" && String(gr[1]) !== ff) return;
+      var lst = nivel === "cliente" && BASE.cli_shares[f[2]].length ? BASE.cli_shares[f[2]] : [[-1, 1]];
+      lst.forEach(function(cs){ var key = nivel === "cliente" ? (cs[0] >= 0 ? BASE.clientes[cs[0]] : "(" + z.id + ")") : z.id, m3 = f[3] * cs[1];
+        var e = o[key] = o[key] || {key: key, ciudad: z.id, zona: z.zona, m3: 0, costo: 0, cedi: {}, planta: {}, afect: false};
+        e.m3 += m3; e.costo += f[4] * cs[1]; e.cedi[NODOS[f[1]].id] = (e.cedi[NODOS[f[1]].id] || 0) + m3; e.planta[NODOS[f[0]].id] = (e.planta[NODOS[f[0]].id] || 0) + m3;
+        if (NODOS[f[0]].id === cerr || NODOS[f[1]].id === cerr) e.afect = true; }); }); return o; }
+  var pa = porCliente(A.id), pb = porCliente(B.id), keys = Array.from(new Set(Object.keys(pa).concat(Object.keys(pb))));
+  var principal = function(o){ var k = Object.keys(o).sort(function(a, b){ return o[b] - o[a]; }); return k.length ? k[0] : "—"; };
+  var dist = function(o, t){ return Object.keys(o).sort(function(a, b){ return o[b] - o[a]; }).slice(0, 2).map(function(k){ return k + " " + PF.format(o[k] / t); }).join(", "); };
+  var rows = keys.map(function(k){ var a = pa[k] || {m3: 0, costo: 0, cedi: {}, planta: {}}, b = pb[k] || {m3: 0, costo: 0, cedi: {}, planta: {}}, x = pa[k] || pb[k];
+    return {key: k, zona: x.zona, m3a: a.m3 * 30 / A.res.H, ca: dist(a.cedi, a.m3) || "—", pla: dist(a.planta, a.m3) || "—", cb: dist(b.cedi, b.m3) || "—", plb: dist(b.planta, b.m3) || "—",
+      cambia: principal(a.cedi) !== principal(b.cedi) || principal(a.planta) !== principal(b.planta), afect: (pa[k] && pa[k].afect) || (pb[k] && pb[k].afect),
+      cua: a.m3 ? a.costo / a.m3 : null, cub: b.m3 ? b.costo / b.m3 : null}; })
+    .filter(function(r){ return (!$("e-cc").checked || r.cambia) && (!$("e-ca").checked || r.afect); }).sort(function(a, b){ return b.m3a - a.m3a; });
+  tabla("e-cli", [{t: nivel === "cliente" ? "Cliente" : "Ciudad", k: "key"}, {t: "Zona", k: "zona"}, {t: "m3/mes", k: "m3a", n: 1, sum: 1},
+    {t: "CEDI en " + A.nombre, k: "ca"}, {t: "Planta en " + A.nombre, k: "pla"}, {t: "CEDI en " + B.nombre, k: "cb"}, {t: "Planta en " + B.nombre, k: "plb"},
+    {t: "Distribución COP/m3 base", k: "cua", n: 1}, {t: "Distribución COP/m3 comparado", k: "cub", n: 1}], rows, {total: 1, max: 500});
+  // referencias por nodo
+  var rs = $("e-rs").value, R2 = RES[rs], nn = {}; flujos(rs).forEach(function(f){ nn[NODOS[f[1]].id] = 1; });
+  if (!$("e-rn").options.length || !nn[$("e-rn").value]) opciones("e-rn", Object.keys(nn).sort().map(function(n){ return [n, n]; }), Object.keys(nn).indexOf("CO01") >= 0 ? "CO01" : Object.keys(nn)[0]);
+  var nsel = $("e-rn").value, porK = {};
+  flujos(rs).forEach(function(f){ if (NODOS[f[1]].id !== nsel) return; var gr = BASE.grupos[f[2]], key = BASE.familias[gr[1]] + "|" + NODOS[f[0]].id; porK[key] = (porK[key] || 0) + f[3]; });
+  var totN = sum(Object.keys(porK).map(function(k){ return porK[k]; })), rr = [];
+  Object.keys(porK).sort(function(a, b){ return porK[b] - porK[a]; }).forEach(function(k){ var refs = BASE.refs[k] || BASE.refs[k.split("|")[0] + "|" + k.split("|")[1]] || [];
+    rr.push({fam: k.split("|")[0], planta: k.split("|")[1], m3: porK[k] * 30 / R2.res.H, pct: porK[k] / totN, refs: refs.slice(0, 5).map(function(x){ return x[0] + " (" + PF.format(x[1]) + ")"; }).join(", ")}); });
+  tabla("e-ref", [{t: "Familia", k: "fam"}, {t: "Planta productora", k: "planta"}, {t: "m3/mes despachados", k: "m3", n: 1, sum: 1}, {t: "% del nodo", k: "pct", n: 1, fmt: function(v){ return PF.format(v); }},
+    {t: "Referencias principales de la familia (participación)", k: "refs"}], rr, {total: 1});
 };
 
-/* ---------------------------------------------------------------- DIAGNOSTICO */
-renderers.diagnostico = function(){
-  var S = D.series.planta_mes, plantas = Object.keys(S.series);
-  plot("ch-planta-mes", plantas.map(function(p){ var i = COLOR_NODO[p] != null ? COLOR_NODO[p] : 7;
-    return {type: "scatter", mode: "lines+markers", name: p + " " + (D.meta.nombre_nodo[p] || ""), x: S.mes, y: S.series[p],
-    line: {color: serie(i), width: 2}, marker: {size: 8, color: serie(i), line: {color: css("--surface"), width: 2}}, hovertemplate: p + " · %{x}<br>%{y:,.0f} m3<extra></extra>"}; }),
-    {yaxis: {title: {text: "m3 / mes"}}, xaxis: {type: "category"},
-     shapes: [{type: "line", xref: "x", yref: "paper", x0: D.meta.mes_cierre, x1: D.meta.mes_cierre, y0: 0, y1: 1, line: {color: css("--muted"), width: 1}}],
-     annotations: [{xref: "x", yref: "paper", x: D.meta.mes_cierre, y: 1, text: "Cierre " + D.meta.cerrada, showarrow: false, yanchor: "bottom", font: {color: css("--ink2")}}]});
-  var rd = D.tarifas.reg.distribucion, dist = D.tarifas.dist, mx = Math.max.apply(null, dist.map(function(p){ return p.km; }));
-  plot("ch-tar-dist", [{type: "scatter", mode: "markers", name: "Rutas observadas", x: dist.map(function(p){ return p.km; }), y: dist.map(function(p){ return p.tarifa; }),
-    marker: {size: 8, color: serie(0), opacity: 0.55, line: {color: css("--surface"), width: 1}},
-    text: dist.map(function(p){ return p.origen + " → " + p.destino + "<br>" + NF.format(p.vol) + " m3 en el periodo"; }), hovertemplate: "%{text}<br>%{x:,.0f} km · %{y:,.0f} COP/m3<extra></extra>"},
-    {type: "scatter", mode: "lines", name: "Regresión", x: [0, mx], y: [rd.a, rd.a + rd.b*mx], line: {color: css("--ink2"), width: 2}, hoverinfo: "skip"}],
-    {xaxis: {title: {text: "km por carretera (estimado)"}}, yaxis: {title: {text: "COP / m3"}}});
-  var X = D.tarifas_xi.filter(function(r){ return r.confiable && r.km > 0; }), rx = D.tarifas.reg.traslado, mxx = Math.max.apply(null, X.map(function(r){ return r.km; }));
-  function capa(nombre, campo, i){ var s = X.filter(function(r){ return r[campo] != null; });
-    return {type: "scatter", mode: "markers", name: nombre, x: s.map(function(r){ return r.km; }), y: s.map(function(r){ return r[campo]; }),
-      marker: {size: s.map(function(r){ return 7 + 14 * Math.sqrt(r.vol / 210000); }), color: serie(i), opacity: 0.6, line: {color: css("--surface"), width: 1}},
-      text: s.map(function(r){ return r.origen + " → " + r.destino + "<br>" + NF.format(r.vol) + " m3 · flota propia " + PF.format(r.pct_flota_propia || 0); }),
-      hovertemplate: "%{text}<br>%{x:,.0f} km · %{y:,.0f} COP/m3<extra>" + nombre + "</extra>"}; }
-  plot("ch-tar-xi", [capa("Terceros (SAP)", "tarifa_tercero", 0), capa("Flota propia (imputada)", "tarifa_propia", 1),
-    {type: "scatter", mode: "lines", name: "Regresión terceros", x: [0, mxx], y: [rx.a, rx.a + rx.b*mxx], line: {color: css("--ink2"), width: 2}, hoverinfo: "skip"}],
-    {xaxis: {title: {text: "km por carretera (estimado)"}}, yaxis: {title: {text: "COP / m3"}}});
-  var P = D.plantas.filter(function(p){ return p.capacidad_m3_mes; });
-  plot("ch-plantas", [["AS-IS", "util_asis", "produccion_asis_m3_mes", 0], ["TO-BE", "util_tobe", "produccion_tobe_m3_mes", 1]].map(function(s){
-    return {type: "bar", name: s[0], x: P.map(function(p){ return p.planta; }), y: P.map(function(p){ return p[s[1]]; }), marker: {color: serie(s[3]), line: {color: css("--surface"), width: 2}},
-      customdata: P.map(function(p){ return [p[s[2]], p.capacidad_m3_mes]; }), hovertemplate: "%{x} " + s[0] + "<br>%{y:.0%} · %{customdata[0]:,.0f} de %{customdata[1]:,.0f} m3<extra></extra>"}; }),
-    {barmode: "group", bargap: 0.35, yaxis: {tickformat: ".0%", title: {text: "Producción / capacidad"}},
-     shapes: [{type: "line", xref: "paper", x0: 0, x1: 1, y0: 1, y1: 1, line: {color: css("--crit"), width: 1}}]});
-  var A = ESC_ID.ASIS_REAL.nodos.filter(function(n){ return n.capacidad_m3 > 0; });
-  plot("ch-asis-alm", [{type: "bar", x: A.map(function(n){ return n.almacen; }), y: A.map(function(n){ return n.utilizacion; }), marker: {color: serie(0)},
-    customdata: A.map(function(n){ return [n.inventario_m3, n.capacidad_m3, n.throughput_m3_mes]; }),
-    hovertemplate: "%{x}<br>%{y:.0%} ocupación<br>inventario %{customdata[0]:,.0f} m3 · capacidad %{customdata[1]:,.0f} m3<br>despacho %{customdata[2]:,.0f} m3/mes<extra></extra>"}],
-    {bargap: 0.4, yaxis: {tickformat: ".0%", title: {text: "Inventario / posiciones"}},
-     shapes: [{type: "line", xref: "paper", x0: 0, x1: 1, y0: D.meta.util, y1: D.meta.util, line: {color: css("--muted"), width: 1}}],
-     annotations: [{xref: "paper", x: 0, y: D.meta.util, text: "utilización máx.", showarrow: false, xanchor: "left", yanchor: "bottom", bgcolor: css("--surface"), font: {color: css("--ink2")}}]});
-  tabla("tb-nodos", [{t: "Nodo", k: "ID_Nodo"}, {t: "Nombre", k: "nombre"}, {t: "Tipo", k: "Tipo_Nodo"}, {t: "Modalidad", k: "Modalidad"}, {t: "Estado", k: "Estado"},
-    {t: "Posiciones", k: "posiciones_total", n: 1}, {t: "Capacidad m3", k: "cap_inv_m3", n: 1}, {t: "Despacho actual m3/mes", k: "despacho_asis_m3_mes", n: 1},
-    {t: "Traslado salida actual m3/mes", k: "traslado_salida_asis_m3_mes", n: 1}, {t: "Costo fijo COP/mes", k: "costo_fijo", n: 1}], D.nodos);
-};
-
-/* ---------------------------------------------------------------- RESULTADOS */
-renderers.resultados = function(){
-  if (!$("sel-esc").options.length){
-    opciones("sel-esc", LISTA_ESC, "E3_OPTIMO"); opciones("wf-base", LISTA_ESC, "ASIS_REAL"); opciones("wf-comp", LISTA_ESC, "E3_OPTIMO");
-    ["sel-esc", "wf-base", "wf-comp", "wf-agr", "f-dist"].forEach(function(i){ $(i).oninput = renderers.resultados; });
-  }
-  // tabla comparativa
-  var filasC = COMP.map(function(c){ return [c[1], c[0], c[2]]; });
-  var h = "<thead><tr><th>Componente</th><th>Grupo</th>" + ESC.map(function(e){ return '<th class="n">' + esc(e.corto) + "</th>"; }).join("") + "</tr></thead><tbody>";
-  filasC.forEach(function(f){ h += "<tr><td>" + f[0] + "</td><td>" + f[2] + "</td>" + ESC.map(function(e){ return '<td class="n">' + NF1.format((e.costos[f[1]] || 0)/1e6) + "</td>"; }).join("") + "</tr>"; });
-  GRUPOS.forEach(function(g){ h += "<tr><td><b>Total " + g[0].toLowerCase() + "</b></td><td></td>" + ESC.map(function(e){ return '<td class="n"><b>' + NF1.format((e.costos[g[1]] || 0)/1e6) + "</b></td>"; }).join("") + "</tr>"; });
-  h += "</tbody><tfoot><tr><td>Total</td><td></td>" + ESC.map(function(e){ return '<td class="n">' + NF1.format(e.costos.Total/1e6) + "</td>"; }).join("") + "</tr>";
-  h += "<tr><td>COP por m3</td><td></td>" + ESC.map(function(e){ return '<td class="n">' + NF.format(e.kpis.costo_por_m3) + "</td>"; }).join("") + "</tr></tfoot>";
-  $("tb-comp").innerHTML = h;
-  var b = ESC_ID[$("wf-base").value], c = ESC_ID[$("wf-comp").value];
-  waterfall("ch-wf", b.costos, c.costos, b.corto, c.corto, $("wf-agr").value);
-  var e = ESC_ID[$("sel-esc").value], k = e.kpis, co = e.costos;
-  $("tiles-esc").innerHTML = [
-    ["Costo total", M(co.Total) + " M", NF.format(k.costo_por_m3) + " COP/m3"],
-    ["Transporte", M(co["Total transporte"]) + " M", "XI terceros " + M(co["Traslado XI terceros"]) + " · flota propia " + M(co["Traslado XI flota propia"]) + " · distribución " + M(co["Distribución"])],
-    ["Almacenamiento", M(co["Total almacenamiento"]) + " M", "manejo " + M(co["Manejo en almacén"]) + " · posiciones " + M(co["Posiciones bodega externa"]) + " · fijo bodegas " + M(co["Fijo bodegas externas"])],
-    ["Fijos plantas/CEDI", M(co["Total fijo nodos"]) + " M", "COP/mes"],
-    ["Traslados XI", NF.format(k.traslados_m3_mes) + " m3", NF.format(k.viajes_traslado_mes || 0) + " viajes/mes · " + PF.format(k.pct_volumen_trasladado || 0) + " del volumen"],
-    ["Bodegas externas usadas", (k.bodegas_abiertas || []).join(", ") || "Ninguna", "déficit capacidad " + NF.format(k.deficit_m3 || 0) + " m3"]
-  ].map(function(t){ return '<div class="tile"><div class="lab">' + t[0] + '</div><div class="val">' + t[1] + '</div><div class="sub">' + t[2] + "</div></div>"; }).join("");
-  var sk = e.sankey, colTipo = {planta: serie(0), almacen: serie(1), zona: serie(2)};
-  plot("ch-sankey", [{type: "sankey", arrangement: "snap", valueformat: ",.0f", valuesuffix: " m3",
-    node: {label: sk.nodos.map(function(n){ return n.label; }), color: sk.nodos.map(function(n){ return colTipo[n.tipo]; }), pad: 14, thickness: 16, line: {color: css("--surface"), width: 1}},
-    link: {source: sk.s, target: sk.t, value: sk.v, color: sk.s.map(function(){ return css("--grid"); })}}], {margin: {l: 10, r: 10, t: 10, b: 10}, font: {color: css("--ink"), size: 12}});
-  var N = e.nodos.filter(function(n){ return n.capacidad_m3 > 0; });
-  plot("ch-util", [{type: "bar", x: N.map(function(n){ return n.almacen + (n.abierto ? "" : " (cerrada)"); }), y: N.map(function(n){ return n.utilizacion; }),
-    marker: {color: N.map(function(n){ return n.abierto ? (n.deficit_m3 > 1 ? css("--crit") : serie(0)) : css("--axis"); })},
-    customdata: N.map(function(n){ return [n.inventario_m3, n.capacidad_m3, n.throughput_m3_mes, n.deficit_m3]; }),
-    hovertemplate: "%{x}<br>%{y:.0%} ocupación<br>inventario %{customdata[0]:,.0f} de %{customdata[1]:,.0f} m3<br>despacho %{customdata[2]:,.0f} m3/mes<br>déficit %{customdata[3]:,.0f} m3<extra></extra>"}],
-    {bargap: 0.35, yaxis: {tickformat: ".0%", title: {text: "Inventario / posiciones"}},
-     shapes: [{type: "line", xref: "paper", x0: 0, x1: 1, y0: D.meta.util, y1: D.meta.util, line: {color: css("--muted"), width: 1}}]});
-  var cc = COMP.filter(function(x){ return (co[x[0]] || 0) > 0; });
-  plot("ch-costo-esc", [{type: "bar", orientation: "h", y: cc.map(function(x){ return x[1]; }), x: cc.map(function(x){ return co[x[0]]/1e6; }),
-    marker: {color: cc.map(function(x){ return serie(COMP.indexOf(x)); })}, text: cc.map(function(x){ return M(co[x[0]]); }), textposition: "outside", cliponaxis: false,
-    textfont: {color: css("--ink2")}, hovertemplate: "%{y}: %{x:,.0f} M COP<extra></extra>"}],
-    {margin: {l: 150, r: 70}, bargap: 0.35, yaxis: {autorange: "reversed"}, xaxis: {title: {text: "Millones COP / mes"}}});
-  var M1 = function(v){ return v == null ? "" : NF1.format(v/1e6); };
-  tabla("tb-tras", [{t: "Origen", k: "planta"}, {t: "Destino", k: "almacen"}, {t: "m3/mes", k: "m3_mes", n: 1, sum: 1}, {t: "% flota propia", k: "pct_flota_propia", n: 1, fmt: function(v){ return v == null ? "" : PF.format(v); }},
-    {t: "Terceros M", k: "costo_terceros_cop", n: 1, sum: 1, fmt: M1}, {t: "Flota propia M", k: "costo_flota_propia_cop", n: 1, sum: 1, fmt: M1},
-    {t: "Total M", k: "costo_cop_mes", n: 1, sum: 1, fmt: M1}, {t: "COP/m3", k: "tarifa_cop_m3", n: 1}, {t: "Viajes/mes", k: "viajes_mes", n: 1, sum: 1, fmt: function(v){ return v == null ? "" : NF1.format(v); }},
-    {t: "Tránsito h", k: "transito_h", n: 1, fmt: function(v){ return v == null ? "" : NF1.format(v); }}], e.traslados.filter(function(r){ return r.planta !== r.almacen; }), {total: 1});
-  var q = $("f-dist").value.toLowerCase();
-  tabla("tb-dist", [{t: "Almacén", k: "almacen"}, {t: "Ciudad", k: "ciudad"}, {t: "Zona", k: "zona"}, {t: "m3/mes", k: "m3_mes", n: 1},
-    {t: "Tarifa COP/m3", k: "tarifa_cop_m3", n: 1}, {t: "Costo COP/mes", k: "costo_cop_mes", n: 1}, {t: "Fuente tarifa", k: "fuente_tarifa"}],
-    e.distribucion.filter(function(r){ return !q || (r.almacen + " " + r.ciudad + " " + r.zona).toLowerCase().indexOf(q) >= 0; }), {max: 300});
-  var SN = D.sensibilidad;
-  ["dias_inventario", "factor_flete"].forEach(function(v, j){
-    var sub = SN.filter(function(r){ return r.variable === v; }), ids = Array.from(new Set(sub.map(function(r){ return r.escenario; })));
-    plot(j ? "ch-sens-flete" : "ch-sens-doi", ids.map(function(id, i){ var s = sub.filter(function(r){ return r.escenario === id; });
-      return {type: "scatter", mode: "lines+markers", name: ESC_ID[id] ? ESC_ID[id].corto : id, x: s.map(function(r){ return r.valor; }), y: s.map(function(r){ return r.costo_total_cop/1e6; }),
-        line: {color: serie(i), width: i === 0 ? 6 : 2}, opacity: i === 0 ? 0.55 : 1, marker: {size: i === 0 ? 12 : 8, color: serie(i), line: {color: css("--surface"), width: 2}},
-        customdata: s.map(function(r){ return r.bodegas_abiertas; }), hovertemplate: "%{x}<br>%{y:,.0f} M COP<br>bodegas: %{customdata}<extra></extra>"}; }),
-      {xaxis: {title: {text: j ? "Factor sobre tarifas de flete" : "Días de inventario"}}, yaxis: {title: {text: "Millones COP / mes"}}});
-  });
-};
-
-/* ---------------------------------------------------------------- MAPA */
-var G = D.geo, MAPA_FILAS = [];
-function nivelKey(cli, nivel){ return nivel === "cliente" ? cli.cliente : (cli[nivel] || "(sin dato)"); }
-function agregarVista(sid, vista, nivel, merc, origen, zona){
-  var fl = G.flujos[sid]; if (!fl) return [];
-  var agg = {};
-  if (vista === "3"){
-    fl.X.forEach(function(r){ var o = G.nodos[r[0]], d = G.nodos[r[1]], me = r[2] ? "E" : "N";
-      if (merc !== "T" && me !== merc) return; if (origen !== "*" && o.id !== origen) return;
-      var k = o.id + "|" + d.id + (vista === "4" ? "|" + me : "");
-      var a = agg[k] = agg[k] || {origen: o.id, destino: d.id, dlabel: d.nombre, olat: o.lat, olon: o.lon, dlat: d.lat, dlon: d.lon, m3: 0, costo: 0, N: 0, E: 0};
-      a.m3 += r[3]; a.costo += r[4]; a[me] += r[3]; });
-  } else {
-    fl.F.forEach(function(r){ var o = G.nodos[vista === "1" ? r[0] : r[1]], cli = G.clientes[r[2]], me = r[3] ? "E" : "N";
-      if (merc !== "T" && me !== merc) return; if (origen !== "*" && o.id !== origen) return; if (zona !== "*" && cli.zona !== zona) return;
-      var dk = nivelKey(cli, nivel), k = o.id + "|" + dk + (vista === "4" ? "|" + me : "");
-      var a = agg[k] = agg[k] || {origen: o.id, destino: dk, dlabel: dk + (nivel === "cliente" ? " · " + (cli.ciudad || "") : ""), olat: o.lat, olon: o.lon, mercado: vista === "4" ? me : null,
-        zona: nivel === "zona" ? dk : cli.zona, slat: 0, slon: 0, sw: 0, m3: 0, costo: 0, N: 0, E: 0};
-      a.m3 += r[4]; a.costo += r[5]; a[me] += r[4];
-      if (cli.lat != null){ a.slat += cli.lat * r[4]; a.slon += cli.lon * r[4]; a.sw += r[4]; } });
-    Object.keys(agg).forEach(function(k){ var a = agg[k]; a.dlat = a.sw ? a.slat / a.sw : null; a.dlon = a.sw ? a.slon / a.sw : null; });
-  }
-  return Object.keys(agg).map(function(k){ var a = agg[k]; a.cop_m3 = a.m3 ? a.costo / a.m3 : 0; a.pE = a.m3 ? a.E / a.m3 : 0; return a; })
-    .sort(function(a, b){ return b.m3 - a.m3; });
+/* ======================================================== 5 MAPA */
+var CLI = D.clientes_geo;
+function geoDestino(gi, cli, nivel){ var z = BASE.zonas[BASE.grupos[gi][0]], c = cli >= 0 ? CLI[cli] : null;
+  if (nivel === "cliente") return {key: c ? BASE.clientes[cli] : "(" + z.id + ")", label: (c ? BASE.clientes[cli] + " · " : "") + z.id, lat: c && c.lat != null ? c.lat : z.lat, lon: c && c.lat != null ? c.lon : z.lon, zona: z.zona};
+  if (nivel === "ciudad") return {key: z.id, label: z.id, lat: z.lat, lon: z.lon, zona: z.zona};
+  if (nivel === "depto") return {key: z.depto || "-", label: z.depto || "-", lat: null, lon: null, zona: z.zona, w: 1, zlat: z.lat, zlon: z.lon};
+  return {key: z.zona || "-", label: z.zona || "-", lat: null, lon: null, zona: z.zona, w: 1, zlat: z.lat, zlon: z.lon}; }
+function vistaMapa(id, vista, nivel, merc, origen, zona){
+  var r = RES[id].res, agg = {};
+  if (vista === "3"){ (r.traslados || []).forEach(function(x){ var o = NODOS[x[0]], d = x[1] >= 0 ? NODOS[x[1]] : null; if (!d) return; if (origen !== "*" && o.id !== origen) return;
+      var k = o.id + "|" + d.id, a = agg[k] = agg[k] || {origen: o.id, dlabel: d.id, olat: o.lat, olon: o.lon, dlat: d.lat, dlon: d.lon, m3: 0, costo: 0, N: 0, E: 0};
+      a.m3 += x[3]; a.costo += x[4] + x[5]; a.N += x[3]; }); }
+  else { flujos(id).forEach(function(f){ var gr = BASE.grupos[f[2]], me = gr[4] ? "E" : "N", o = NODOS[vista === "1" ? f[0] : f[1]], z = BASE.zonas[gr[0]];
+      if (merc !== "T" && me !== merc) return; if (origen !== "*" && o.id !== origen) return; if (zona !== "*" && z.zona !== zona) return;
+      var lst = nivel === "cliente" && BASE.cli_shares[f[2]].length ? BASE.cli_shares[f[2]] : [[-1, 1]];
+      lst.forEach(function(cs){ var g = geoDestino(f[2], cs[0], nivel), k = o.id + "|" + g.key + (vista === "4" ? "|" + me : ""), m3 = f[3] * cs[1];
+        var a = agg[k] = agg[k] || {origen: o.id, dlabel: g.label, olat: o.lat, olon: o.lon, mercado: vista === "4" ? me : null, sl: 0, so: 0, sw: 0, m3: 0, costo: 0, N: 0, E: 0};
+        a.m3 += m3; a.costo += f[4] * cs[1]; a[me] += m3; var la = g.lat != null ? g.lat : g.zlat, lo = g.lat != null ? g.lon : g.zlon;
+        if (la != null){ a.sl += la * m3; a.so += lo * m3; a.sw += m3; } }); });
+    Object.keys(agg).forEach(function(k){ var a = agg[k]; a.dlat = a.sw ? a.sl / a.sw : null; a.dlon = a.sw ? a.so / a.sw : null; }); }
+  return Object.keys(agg).map(function(k){ var a = agg[k]; a.cop = a.m3 ? a.costo / a.m3 : 0; a.pE = a.m3 ? a.E / a.m3 : 0; return a; }).sort(function(a, b){ return b.m3 - a.m3; });
 }
 renderers.mapa = function(){
-  if (!G){ $("m-mapa").innerHTML = "<p class='nota'>Sin datos geográficos.</p>"; return; }
-  if (!$("m-esc").options.length){
-    opciones("m-esc", LISTA_ESC, "ASIS_REAL");
-    opciones("m-origen", [["*", "Todos"]].concat(G.nodos.filter(function(n){ return n.id !== "EXTERNO"; }).map(function(n){ return [n.id, n.nombre]; })), "*");
-    var zonas = Array.from(new Set(G.clientes.map(function(c){ return c.zona; }).filter(Boolean))).sort();
-    opciones("m-zona", [["*", "Todas"]].concat(zonas.map(function(z){ return [z, z]; })), "*");
-    ["m-esc", "m-vista", "m-nivel", "m-merc", "m-origen", "m-zona", "m-topn", "m-base", "m-enc"].forEach(function(i){ $(i).oninput = renderers.mapa; });
-    $("m-csv").onclick = function(){
-      var lin = [["origen", "destino", "mercado", "m3_mes", "pct_exportacion", "costo_cop_mes", "cop_m3"].join(";")].concat(MAPA_FILAS.map(function(r){
-        return [r.origen, r.dlabel, r.mercado || "", r.m3.toFixed(2).replace(".", ","), r.pE.toFixed(4).replace(".", ","), Math.round(r.costo), Math.round(r.cop_m3)].join(";"); }));
-      var blob = new Blob(["﻿" + lin.join("\n")], {type: "text/csv;charset=utf-8"}), a = document.createElement("a");
-      a.href = URL.createObjectURL(blob); a.download = "flujos_" + $("m-esc").value + "_vista" + $("m-vista").value + ".csv"; a.click();
-    };
-  }
-  var sid = $("m-esc").value, vista = $("m-vista").value, nivel = $("m-nivel").value, merc = $("m-merc").value, origen = $("m-origen").value, zona = $("m-zona").value;
-  $("m-nivel").disabled = vista === "3"; $("m-zona").disabled = vista === "3";
-  var topn = +$("m-topn").value; $("m-topn-o").textContent = topn;
-  var filas = agregarVista(sid, vista, nivel, merc, origen, zona); MAPA_FILAS = filas;
-  var tot = filas.reduce(function(s, r){ return s + r.m3; }, 0), cost = filas.reduce(function(s, r){ return s + r.costo; }, 0), totE = filas.reduce(function(s, r){ return s + r.E; }, 0);
-  var orig = Array.from(new Set(filas.map(function(r){ return r.origen; })));
-  $("m-tiles").innerHTML = [["Volumen", NF.format(tot) + " m3/mes", filas.length + " flujos · " + orig.length + " orígenes"], ["Costo de transporte", M(cost) + " M", NF.format(tot ? cost / tot : 0) + " COP/m3"],
-    ["Nacional (N)", NF.format(tot - totE) + " m3", PF.format(tot ? (tot - totE) / tot : 0)], ["Exportación (E)", NF.format(totE) + " m3", PF.format(tot ? totE / tot : 0)]]
+  if (!$("m-esc").options.length || desact.mapa){ opciones("m-esc", lista(), $("m-esc").value || "S0_ACTUAL"); desact.mapa = 0;
+    opciones("m-origen", [["*", "Todos"]].concat(NODOS.map(function(n){ return [n.id, n.nombre]; })), $("m-origen").value || "*");
+    var zonas = Array.from(new Set(BASE.zonas.map(function(z){ return z.zona; }).filter(Boolean))).sort();
+    opciones("m-zona", [["*", "Todas"]].concat(zonas.map(function(z){ return [z, z]; })), $("m-zona").value || "*");
+    ["m-esc", "m-vista", "m-nivel", "m-merc", "m-origen", "m-zona", "m-topn", "m-base", "m-enc"].forEach(function(i){ $(i).oninput = renderers.mapa; }); }
+  var id = $("m-esc").value, vista = $("m-vista").value, nivel = $("m-nivel").value, merc = $("m-merc").value, origen = $("m-origen").value, zona = $("m-zona").value, topn = +$("m-topn").value;
+  $("m-topn-o").textContent = topn; $("m-nivel").disabled = vista === "3"; $("m-merc").disabled = vista === "3";
+  var filas = vistaMapa(id, vista, nivel, merc, origen, zona), R = RES[id], H = R.res.H;
+  var tot = sum(filas.map(function(f){ return f.m3; })), cost = sum(filas.map(function(f){ return f.costo; })), tE = sum(filas.map(function(f){ return f.E; }));
+  $("m-tiles").innerHTML = [["Volumen", NF.format(tot * 30 / H) + " m3/mes", filas.length + " flujos"], ["Costo de transporte del tramo", M(cost * 30 / H) + " M/mes", NF.format(tot ? cost / tot : 0) + " COP/m3"],
+    ["Nacional (N)", NF.format((tot - tE) * 30 / H) + " m3/mes", vista === "3" ? "traslado interno" : PF.format(tot ? (tot - tE) / tot : 0)], ["Exportación (E)", NF.format(tE * 30 / H) + " m3/mes", PF.format(tot ? tE / tot : 0)]]
     .map(function(t){ return '<div class="tile"><div class="lab">' + t[0] + '</div><div class="val">' + t[1] + '</div><div class="sub">' + t[2] + "</div></div>"; }).join("");
-  var porMerc = vista === "4", visibles = filas.filter(function(r){ return r.dlat != null && r.olat != null; }).slice(0, topn);
-  var col = function(r){ return porMerc ? (r.mercado === "E" ? serie(1) : serie(0)) : colorNodo(r.origen); };
-  var lineas = visibles.map(function(r){ return {olat: r.olat, olon: r.olon, dlat: r.dlat, dlon: r.dlon, m3: r.m3, color: col(r),
-    hover: "<b>" + esc(r.origen) + " → " + esc(r.dlabel) + "</b>" + (r.mercado ? " · " + r.mercado : "") + "<br>" + NF.format(r.m3) + " m3/mes · " + PF.format(r.pE) + " exportación<br>" + M(r.costo) + " M COP/mes · " + NF.format(r.cop_m3) + " COP/m3"}; });
-  var puntos = vista === "3" ? [] : visibles.map(function(r){ return {lat: r.dlat, lon: r.dlon, m3: r.m3, color: col(r), hover: esc(r.dlabel) + "<br>" + NF.format(r.m3) + " m3/mes desde " + r.origen}; });
-  var activos = {}; visibles.forEach(function(r){ activos[r.origen] = 1; if (vista === "3") activos[r.destino] = 1; });
-  var nodos = G.nodos.filter(function(n){ return activos[n.id] || (n.tipo === "planta"); });
+  var porM = vista === "4", vis = filas.filter(function(f){ return f.dlat != null && f.olat != null; }).slice(0, topn);
+  var col = function(f){ return porM ? (f.mercado === "E" ? serie(1) : serie(0)) : colorNodo(f.origen); };
+  var lineas = vis.map(function(f){ return {olat: f.olat, olon: f.olon, dlat: f.dlat, dlon: f.dlon, m3: f.m3, color: col(f),
+    hover: "<b>" + esc(f.origen) + " → " + esc(f.dlabel) + "</b>" + (f.mercado ? " · " + f.mercado : "") + "<br>" + NF.format(f.m3 * 30 / H) + " m3/mes · " + NF.format(f.cop) + " COP/m3"}; });
+  var puntos = vista === "3" ? [] : vis.map(function(f){ return {lat: f.dlat, lon: f.dlon, m3: f.m3, color: col(f), hover: esc(f.dlabel) + "<br>" + NF.format(f.m3 * 30 / H) + " m3/mes desde " + f.origen}; });
+  var act = {}; vis.forEach(function(f){ act[f.origen] = 1; if (vista === "3") act[f.dlabel] = 1; });
+  var cerr = (R.prm && R.prm.planta_cerrada) || null;
+  var nodos = NODOS.filter(function(n){ return act[n.id] || n.es_planta; }).map(function(n){ return {id: n.id, nombre: n.nombre, tipo: n.tipo, lat: n.lat, lon: n.lon, cerrada: R.res.tipo !== "historico" && (n.id === cerr || R.res.abiertos[n.id] === false)}; });
   dibujarMapa("m-mapa", lineas, puntos, nodos, $("m-base").value, $("m-enc").value);
-  leyenda("m-ley", porMerc ? [["Nacional (N)", serie(0)], ["Exportación (E)", serie(1)]] : orig.slice(0, 12).map(function(o){ return [o, colorNodo(o)]; }));
-  tabla("m-tabla", [{t: "Origen", k: "origen"}, {t: vista === "3" ? "Destino (nodo)" : "Destino", k: "dlabel"}].concat(vista === "4" ? [{t: "Mercado", k: "mercado"}] : [])
-    .concat([{t: "m3/mes", k: "m3", n: 1, sum: 1}, {t: "Nacional m3", k: "N", n: 1, sum: 1}, {t: "Exportación m3", k: "E", n: 1, sum: 1},
-      {t: "Costo M COP/mes", k: "costo", n: 1, sum: 1, fmt: function(v){ return NF1.format(v/1e6); }}, {t: "COP/m3", k: "cop_m3", n: 1}]), filas, {max: 1500, total: 1});
-  // comparación entre escenarios
-  var ids = ESC.map(function(e){ return e.id; }), porEsc = {}, todosO = {};
-  ids.forEach(function(i){ porEsc[i] = {}; agregarVista(i, vista, nivel, merc, origen, zona).forEach(function(r){ porEsc[i][r.origen] = (porEsc[i][r.origen] || 0) + r.m3; todosO[r.origen] = (todosO[r.origen] || 0) + r.m3; }); });
-  var os = Object.keys(todosO).sort(function(a, b){ return todosO[b] - todosO[a]; }).slice(0, 14);
-  plot("m-comp", ids.map(function(i, j){ return {type: "bar", name: ESC_ID[i].corto, x: os, y: os.map(function(o){ return porEsc[i][o] || 0; }), marker: {color: serie(j)},
-    hovertemplate: ESC_ID[i].corto + "<br>%{x}: %{y:,.0f} m3/mes<extra></extra>"}; }), {barmode: "group", bargap: 0.25, yaxis: {title: {text: "m3 / mes"}}, legend: {y: -0.15, yanchor: "top"}, margin: {b: 120}});
-  var nm = ids.map(function(i){ return ESC_ID[i].corto; });
-  var tN = ids.map(function(i){ return agregarVista(i, vista === "3" ? "3" : "2", nivel, "T", origen, zona).reduce(function(s, r){ return s + r.N; }, 0); });
-  var tE = ids.map(function(i){ return agregarVista(i, vista === "3" ? "3" : "2", nivel, "T", origen, zona).reduce(function(s, r){ return s + r.E; }, 0); });
-  plot("m-merc-ch", [{type: "bar", orientation: "h", name: "Nacional (N)", y: nm, x: tN, marker: {color: serie(0), line: {color: css("--surface"), width: 2}}, hovertemplate: "%{y}<br>N: %{x:,.0f} m3<extra></extra>"},
-    {type: "bar", orientation: "h", name: "Exportación (E)", y: nm, x: tE, marker: {color: serie(1), line: {color: css("--surface"), width: 2}}, hovertemplate: "%{y}<br>E: %{x:,.0f} m3<extra></extra>"}],
-    {barmode: "stack", bargap: 0.35, margin: {l: 200}, yaxis: {autorange: "reversed"}, xaxis: {title: {text: "m3 / mes"}}});
+  leyenda("m-ley", porM ? [["Nacional (N)", serie(0)], ["Exportación (E)", serie(1)]] : Object.keys(act).filter(function(k){ return IDN[k] !== undefined; }).map(function(o){ return [o, colorNodo(o)]; }));
+  tabla("m-tabla", [{t: "Origen", k: "origen"}, {t: "Destino", k: "dlabel"}].concat(porM ? [{t: "Mercado", k: "mercado"}] : []).concat([{t: "m3/mes", k: "mm", n: 1, sum: 1}, {t: "COP/m3", k: "cop", n: 1}, {t: "% exportación", k: "pE", n: 1, fmt: function(v){ return PF.format(v); }}]),
+    filas.map(function(f){ return Object.assign({mm: f.m3 * 30 / H}, f); }), {total: 1, max: 800});
+  var ids = ORDEN.slice(0, 8), porE = {}, todos = {};
+  ids.forEach(function(i){ porE[i] = {}; vistaMapa(i, vista, nivel, merc, origen, zona).forEach(function(f){ porE[i][f.origen] = (porE[i][f.origen] || 0) + f.m3 * 30 / RES[i].res.H; todos[f.origen] = (todos[f.origen] || 0) + f.m3; }); });
+  var os = Object.keys(todos).sort(function(a, b){ return todos[b] - todos[a]; }).slice(0, 14);
+  plot("m-comp", ids.map(function(i, j){ return {type: "bar", name: RES[i].nombre, x: os, y: os.map(function(o){ return porE[i][o] || 0; }), marker: {color: serie(j)}, hovertemplate: RES[i].nombre + "<br>%{x}: %{y:,.0f} m3/mes<extra></extra>"}; }),
+    {barmode: "group", bargap: 0.25, yaxis: {title: {text: "m3 / mes"}}, legend: {y: -0.15, yanchor: "top"}, margin: {b: 140}});
 };
 
-/* ---------------------------------------------------------------- SIMULADOR */
-var SIM = D.sim, PRM = null, ULT = null, MODO_VER = "OPT";
-var MODOS = ["ACTUAL", "A", "B", "OPT", "PERS"];
-var NOMBRE_MODO = {ACTUAL: "Actual (CO10 operando)", A: "A · Bodega externa", B: "B · Traslado a CEDI", OPT: "Óptimo (cierre)", PERS: "Personalizado"};
-var TIPO = {propio: "CEDI propio", "3pl": "CEDI 3PL", bodega_externa_actual: "Bodega externa actual", candidata: "Bodega externa candidata"};
-function get(o, path){ return path.split(".").reduce(function(a, k){ return a == null ? a : a[k]; }, o); }
-function set(o, path, v){ var p = path.split("."), last = p.pop(); p.reduce(function(a, k){ return a[k] = a[k] || {}; }, o)[last] = v; }
-function slider(c){ return '<div><label for="r-' + c.k + '">' + c.t + ': <output id="o-' + c.k.replace(/\./g, "_") + '"></output></label><input type="range" data-k="' + c.k + '" id="r-' + c.k + '" min="' + c.min + '" max="' + c.max + '" step="' + c.step + '"></div>'; }
-var CTRL = {
-  alm: [{k: "dias_inventario", t: "Días de inventario", min: 5, max: 60, step: 0.1, f: function(v){ return NF1.format(v) + " días"; }},
-        {k: "utilizacion_maxima", t: "Utilización máxima de posiciones", min: 0.5, max: 1, step: 0.01, f: function(v){ return PF.format(v); }},
-        {k: "penalidad", t: "Penalización por m3 sin capacidad", min: 50000, max: 1000000, step: 10000, f: function(v){ return NF.format(v) + " COP"; }}],
-  tra: [{k: "factor_flete_traslado", t: "Factor tarifa XI terceros", min: 0.5, max: 1.8, step: 0.01, f: function(v){ return "× " + v.toFixed(2); }},
-        {k: "factor_flota_propia", t: "Factor costo flota propia", min: 0.3, max: 1.8, step: 0.01, f: function(v){ return "× " + v.toFixed(2); }},
-        {k: "costo_km", t: "Flota propia: COP por km (método km)", min: 1000, max: 9000, step: 50, f: function(v){ return NF.format(v); }},
-        {k: "costo_fijo_viaje", t: "Flota propia: costo fijo por viaje (método km)", min: 0, max: 2000000, step: 10000, f: function(v){ return NF.format(v); }},
-        {k: "factor_flete_distribucion", t: "Factor tarifa de distribución", min: 0.5, max: 1.8, step: 0.01, f: function(v){ return "× " + v.toFixed(2); }}],
-  dem: [{k: "crecimiento", t: "Crecimiento total de demanda", min: -0.3, max: 0.6, step: 0.01, f: function(v){ return (v >= 0 ? "+" : "") + PF.format(v); }},
-        {k: "crec_N", t: "Crecimiento mercado Nacional (N)", min: -0.5, max: 1, step: 0.01, f: function(v){ return (v >= 0 ? "+" : "") + PF.format(v); }},
-        {k: "crec_E", t: "Crecimiento Exportación (E)", min: -0.5, max: 1, step: 0.01, f: function(v){ return (v >= 0 ? "+" : "") + PF.format(v); }}]
-};
-var TODOS = [].concat(CTRL.alm, CTRL.tra, CTRL.dem);
-function simReset(){
-  PRM = JSON.parse(JSON.stringify(SIM.defaults)); PRM.ajustes = {}; PRM.crec_zona = {}; PRM.factor_zona = {};
-  SIM.almacenes.forEach(function(n){ PRM.ajustes[n.id] = {activa: true, posiciones: n.posiciones, manejo: n.manejo, posicion_cop: n.posicion_cop, fijo: n.fijo}; });
-  var plantasRep = SIM.plantas.filter(function(p){ return p !== SIM.planta_cerrada; });
-  plantasRep.forEach(function(p){ if (PRM.reparto[p] == null) PRM.reparto[p] = 0; });
-  $("sim-alm").innerHTML = CTRL.alm.map(slider).join("");
-  $("sim-tra").innerHTML = '<div><label>Método de costo de la flota propia<select id="s-metodo" style="width:100%"><option value="similares">Viajes similares (tarifa de terceros en la ruta)</option><option value="km">Costo fijo + COP/km × distancia</option></select></label></div>' +
-    '<div><label>Participación de flota propia en traslados<select id="s-sprop" style="width:100%"><option value="hist">Histórica por ruta</option><option value="0">0 % (todo terceros)</option><option value="0.5">50 %</option><option value="1">100 % (todo flota propia)</option></select></label></div>' +
-    CTRL.tra.map(slider).join("");
-  $("sim-dem").innerHTML = CTRL.dem.map(slider).join("");
-  $("sim-pers").innerHTML = '<div class="chk"><input type="checkbox" id="p-cerrar"><label for="p-cerrar" style="color:var(--ink)">Cerrar planta ' + SIM.planta_cerrada + '</label></div>' +
-    '<div><label>Bodega externa actual (CO99)<select id="p-co99" style="width:100%"><option value="decide">El modelo decide</option><option value="abierta">Forzar abierta</option><option value="cerrada">Cerrada</option></select></label></div>' +
-    '<div class="chk"><input type="checkbox" id="p-cand"><label for="p-cand" style="color:var(--ink)">Permitir bodegas externas candidatas</label></div>' +
-    '<div class="chk"><input type="checkbox" id="p-lim"><label for="p-lim" style="color:var(--ink)">Limitar traslados a otros CEDI al nivel actual</label></div>';
-  $("sim-rep").innerHTML = '<div class="chk"><input type="checkbox" id="rep-usar"><label for="rep-usar" style="color:var(--ink)">Personalizar reparto</label></div>' +
-    plantasRep.map(function(p){ return '<div><label>' + p + " " + (D.meta.nombre_nodo[p] || "") + ': <output id="rep-o-' + p + '"></output></label><input type="range" min="0" max="100" step="1" id="rep-' + p + '"></div>'; }).join("");
-  TODOS.forEach(function(c){ var r = $("r-" + c.k); r.value = get(PRM, c.k);
-    var o = $("o-" + c.k.replace(/\./g, "_")); o.textContent = c.f(+r.value);
-    r.oninput = function(){ set(PRM, c.k, +r.value); o.textContent = c.f(+r.value); programar(); }; });
-  $("s-metodo").value = PRM.metodo; $("s-metodo").oninput = function(){ PRM.metodo = this.value; programar(); };
-  $("s-sprop").value = "hist"; $("s-sprop").oninput = function(){ PRM.s_propia = this.value === "hist" ? null : +this.value; programar(); };
-  $("p-cerrar").checked = PRM.pers.cerrar; $("p-co99").value = PRM.pers.co99; $("p-cand").checked = PRM.pers.candidatas; $("p-lim").checked = PRM.pers.limitar;
-  $("p-cerrar").oninput = function(){ PRM.pers.cerrar = this.checked; programar(); }; $("p-co99").oninput = function(){ PRM.pers.co99 = this.value; programar(); };
-  $("p-cand").oninput = function(){ PRM.pers.candidatas = this.checked; programar(); }; $("p-lim").oninput = function(){ PRM.pers.limitar = this.checked; programar(); };
-  $("rep-usar").checked = PRM.usar_reparto; $("rep-usar").oninput = function(){ PRM.usar_reparto = this.checked; programar(); };
-  function repTxt(){ var t = 0; plantasRep.forEach(function(p){ t += PRM.reparto[p] || 0; }); plantasRep.forEach(function(p){ $("rep-o-" + p).textContent = t ? PF.format((PRM.reparto[p] || 0) / t) : "0 %"; }); }
-  plantasRep.forEach(function(p){ var r = $("rep-" + p); r.value = Math.round((PRM.reparto[p] || 0) * 100);
-    r.oninput = function(){ PRM.reparto[p] = +r.value / 100; repTxt(); if (PRM.usar_reparto) programar(); }; });
-  repTxt();
-  var tz = "<thead><tr><th>Zona</th><th class='n'>Crecimiento %</th><th class='n'>Factor tarifa distribución</th></tr></thead><tbody>" +
-    SIM.regiones.map(function(r){ return "<tr><td>" + esc(r) + "</td><td class='n'><input type='number' class='chico' step='1' data-z='" + esc(r) + "' data-t='c' value='0'></td><td class='n'><input type='number' class='chico' step='0.05' min='0' data-z='" + esc(r) + "' data-t='f' value='1'></td></tr>"; }).join("") + "</tbody>";
-  $("sim-zonas").innerHTML = tz;
-  $("sim-zonas").querySelectorAll("input").forEach(function(i){ i.oninput = function(){ if (i.dataset.t === "c") PRM.crec_zona[i.dataset.z] = (+i.value || 0) / 100; else PRM.factor_zona[i.dataset.z] = +i.value || 1; programar(); }; });
-  var t = $("sim-tabla");
-  t.innerHTML = "<thead><tr><th>Activa</th><th>Almacén</th><th>Tipo</th><th class='n'>Posiciones</th><th class='n'>Manejo COP/m3</th><th class='n'>Costo posición COP/mes</th><th class='n'>Costo fijo COP/mes</th></tr></thead><tbody>" +
-    SIM.almacenes.map(function(n){ var a = PRM.ajustes[n.id];
-      return "<tr><td><input type='checkbox' data-id='" + n.id + "' data-k='activa' " + (a.activa ? "checked" : "") + "></td><td>" + esc(n.nombre) + (n.id === SIM.planta_cerrada ? " (planta a cerrar)" : "") + "</td><td>" + TIPO[n.tipo] + "</td>" +
-        ["posiciones", "manejo", "posicion_cop", "fijo"].map(function(k){ return "<td class='n'><input type='number' min='0' step='any' data-id='" + n.id + "' data-k='" + k + "' value='" + Math.round(a[k]) + "'></td>"; }).join("") + "</tr>"; }).join("") + "</tbody>";
-  t.querySelectorAll("input").forEach(function(i){ i.oninput = function(){ PRM.ajustes[i.dataset.id][i.dataset.k] = i.type === "checkbox" ? i.checked : +i.value; programar(); }; });
-  var seg = $("sim-modo-sel");
-  seg.innerHTML = MODOS.map(function(m){ return '<button data-m="' + m + '" aria-pressed="' + (m === MODO_VER) + '">' + NOMBRE_MODO[m] + "</button>"; }).join("");
-  seg.querySelectorAll("button").forEach(function(b){ b.onclick = function(){ MODO_VER = b.dataset.m; seg.querySelectorAll("button").forEach(function(x){ x.setAttribute("aria-pressed", x === b); }); dibujarSim(); }; });
-  opciones("sw-base", MODOS.map(function(m){ return [m, NOMBRE_MODO[m]]; }), "ACTUAL"); opciones("sw-comp", MODOS.map(function(m){ return [m, NOMBRE_MODO[m]]; }), "OPT");
-  ["sw-base", "sw-comp", "sw-agr", "sm-vista", "sm-merc", "sm-base"].forEach(function(i){ $(i).oninput = dibujarSim; });
+/* ======================================================== 6 VALIDADOR */
+function opcionesValidador(){
+  var ids = ORDEN; opciones("v-esc", lista(), $("v-esc").value || "S3_OPTIMIZADO");
+  var zs = BASE.zonas.map(function(z, i){ return [String(i), z.id]; }).sort(function(a, b){ return a[1].localeCompare(b[1]); });
+  if (!$("v-z").options.length){ opciones("v-z", zs, String(BASE.zonas.findIndex(function(z){ return z.id === "MEDELLIN"; }))); opciones("v-f", BASE.familias.map(function(f, i){ return [String(i), f]; }), String(Math.max(0, BASE.familias.indexOf("FaCa")))); }
+  var zi = +$("v-z").value, cl = [["", "(toda la ciudad)"]];
+  CLI.forEach(function(c, i){ if (c.ciudad === BASE.zonas[zi].id) cl.push([String(i), BASE.clientes[i]]); });
+  opciones("v-cli", cl, "");
+  var R = RES[$("v-esc").value], K = R.res.K || [], f = +$("v-f").value, pls = {};
+  K.forEach(function(k){ if (k[0] === f) pls[k[1]] = 1; }); if (!Object.keys(pls).length) NODOS.forEach(function(n, i){ if (n.es_planta) pls[i] = 1; });
+  opciones("v-o", Object.keys(pls).map(function(p){ return [p, NODOS[+p].id + " " + NODOS[+p].ciudad]; }), Object.keys(pls).indexOf(String(IDN.CO01)) >= 0 ? String(IDN.CO01) : Object.keys(pls)[0]);
+  opciones("v-t", (R.res.fechas || []).map(function(d, i){ return [String(i), d]; }), $("v-t").value || "3");
 }
-var timer = null;
-function programar(){ clearTimeout(timer); $("sim-estado").textContent = "calculando..."; timer = setTimeout(correrSim, 300); }
-function correrSim(){
-  var t0 = performance.now(); ULT = {};
-  MODOS.forEach(function(m){ ULT[m] = SimRed.resolverSim(SIM, PRM, m); });
-  $("sim-estado").textContent = "5 optimizaciones resueltas en " + NF.format(performance.now() - t0) + " ms";
-  dibujarSim();
+function rutas(){
+  var R = RES[$("v-esc").value], r = R.res, prm = R.prm, ins = insDe(R.id) || MotorRed.instancia(BASE, prm), z = +$("v-z").value, f = +$("v-f").value, o = +$("v-o").value;
+  var V = +$("v-m3").value, t = +$("v-t").value, dias = +$("v-dias").value, bep = $("v-be").value, tr = prm.transporte, sv = prm.servicio, H = r.H;
+  var fzz = (tr.f_zona || {})[BASE.zonas[z].zona] || 1, lmax = sv.lmax_h, meta = sv.meta_h, filas = [];
+  var abiertos = r.abiertos || {}, act = {};
+  (ins ? ins.N : NODOS.map(function(_, i){ return i; })).forEach(function(n){ act[n] = 1; });
+  var cand = NODOS.map(function(_, i){ return i; }).filter(function(n){ return act[n] && ins.pos_m3[n] > 0; });
+  var asign = {}; if (r.tipo !== "historico"){ (r.asignacion || []).forEach(function(a){ if (a[1] === z && r.K[a[2]][0] === f && !a[8]) asign[a[0]] = (asign[a[0]] || 0) + a[4]; }); }
+  else (r.asignacion_grupos || []).forEach(function(a){ var gr = BASE.grupos[a[2]]; if (gr[0] === z && gr[1] === f) asign[a[0]] = (asign[a[0]] || 0) + a[4]; });
+  var totA = sum(Object.keys(asign).map(function(k){ return asign[k]; }));
+  cand.forEach(function(w){ var be = NODOS[w].bodega_externa; if (bep === "no" && be) return; if (bep === "solo" && !be && w !== o) return;
+    var tramos = [], horas = 0, L = 0, flete1 = 0, man1 = 0;
+    if (w !== o){ var lane = BASE.lanes[NODOS[o].id + "|" + NODOS[w].id], s = (tr.s_propia === null || tr.s_propia === undefined) ? lane.s : tr.s_propia;
+      var tp = tr.metodo === "km" ? (lane.km > 0 ? (tr.fijo_viaje + tr.costo_km * lane.km) / (lane.m3v || BASE.meta.m3_viaje_def) : 0) : (lane.tp === null || lane.tp === undefined ? lane.tt : lane.tp);
+      flete1 = V * ((1 - s) * lane.tt * tr.f_terc + s * tp * tr.f_prop); man1 = V * (ins.man_s[o] + ins.man_e[w]); L = Math.floor(lane.horas / 24); horas += lane.horas;
+      var permit = ins.arcos.some(function(a){ return a.u === o && a.v === w; });
+      tramos.push(NODOS[o].id + " → " + NODOS[w].id + ": " + NF.format(V) + " m3 · flete " + NF.format(flete1) + " · manejo " + NF.format(man1) + " · " + NF1.format(lane.horas) + " h" + (permit ? "" : " (ruta no habilitada en el escenario: forzada)")); }
+    var alm = w !== o ? V * dias * (ins.alm[w] + (prm.costo_capital_dia || 0)) : 0, flete2 = V * BASE.c_out[w][z] * tr.f_dist * fzz, man2 = V * ins.man_s[w];
+    horas += BASE.h_out[w][z];
+    tramos.push(NODOS[w].id + " → " + BASE.zonas[z].id + ": " + NF.format(V) + " m3 · flete " + NF.format(flete2) + " · manejo " + NF.format(man2) + " · " + NF1.format(BASE.h_out[w][z]) + " h" + (BASE.obs_out && !BASE.obs_out[w][z] ? " (tarifa estimada por distancia)" : ""));
+    var nd = r.nodos_dia[NODOS[w].id], libre = Infinity;
+    if (nd){ for (var d = Math.min(H - 1, t + L); d <= Math.min(H - 1, t + L + Math.max(0, dias)); d++) libre = Math.min(libre, nd.cap - nd.inv_fin[d]); } else libre = ins.cap[w];
+    var abierto = r.tipo === "historico" ? true : abiertos[NODOS[w].id] !== false, fijoInc = abierto ? 0 : ins.fijo[w] * H / 30;
+    var desp = nd ? sum(nd.despachos) + sum(nd.salidas_tr) : 0, fijoProm = abierto ? ins.fijo[w] * H / 30 * V / (desp + V) : 0;
+    var variable = flete1 + man1 + alm + flete2 + man2, cumple = (lmax == null || horas <= lmax);
+    var razones = []; if (libre < V) razones.push("capacidad libre insuficiente (" + NF.format(Math.max(0, libre)) + " m3)"); if (!cumple) razones.push("supera el tiempo máximo de " + lmax + " h");
+    if (!abierto) razones.push("bodega cerrada en el escenario: requiere abrirla");
+    filas.push({ruta: w === o ? "Directo desde " + NODOS[o].id : "Vía " + NODOS[w].id + (be ? " (bodega externa)" : ""), w: w, tipo: asign[w] ? "Ruta del escenario (" + PF.format(asign[w] / totA) + ")" : (w === o ? "Directa" : "Alternativa"),
+      tramos: tramos.join("<br>"), flete: flete1 + flete2, manejo: man1 + man2, alm: alm, fijoInc: fijoInc, fijoProm: fijoProm, horas: horas, libre: libre, ocup: nd && nd.pos_m3 ? (nd.inv_fin[Math.min(H - 1, t + L)] + V) / nd.pos_m3 : null,
+      servicio: meta != null ? (horas <= meta ? "✓ en meta" : "fuera de meta") + (cumple ? "" : " · ✗ máximo") : "", total: variable, unit: variable / V, marg: variable + fijoInc, factible: razones.length ? razones.join("; ") : "Sí", _cls: asign[w] ? "ref" : (razones.length ? "nof" : "")}); });
+  var refs = filas.filter(function(x){ return x.factible === "Sí"; }), ref = filas.filter(function(x){ return x._cls === "ref"; })[0] || refs.sort(function(a, b){ return a.total - b.total; })[0];
+  filas.forEach(function(x){ x.dif = ref ? x.total - ref.total : null; });
+  filas.sort(function(a, b){ return a.total - b.total; });
+  tabla("v-tabla", [{t: "Ruta", k: "ruta"}, {t: "Tipo", k: "tipo"}, {t: "Tramos (volumen, costo, tiempo)", k: "tramos", fmt: function(v){ return v; }}, {t: "Flete", k: "flete", n: 1}, {t: "Manejo", k: "manejo", n: 1},
+    {t: "Almacenaje", k: "alm", n: 1}, {t: "Costo variable", k: "total", n: 1}, {t: "COP/m3", k: "unit", n: 1}, {t: "Δ vs referencia", k: "dif", n: 1, fmt: function(v){ return v == null ? "" : (v > 0 ? "+" : "") + NF.format(v); }},
+    {t: "Fijo incremental", k: "fijoInc", n: 1}, {t: "Fijo atribuible (prom.)", k: "fijoProm", n: 1}, {t: "Horas", k: "horas", n: 1, fmt: function(v){ return NF1.format(v); }},
+    {t: "Capacidad libre m3", k: "libre", n: 1, fmt: function(v){ return v === Infinity ? "—" : NF.format(v); }}, {t: "Ocupación resultante", k: "ocup", n: 1, fmt: function(v){ return v == null ? "" : PF.format(v); }},
+    {t: "Servicio", k: "servicio"}, {t: "¿Factible?", k: "factible"}], filas);
+  $("v-nota").innerHTML = "Referencia: " + (ref ? esc(ref.ruta) : "—") + ". <b>Costo variable</b> = fletes + manejo + almacenaje de esta demanda. <b>Fijo incremental</b> = costo fijo del horizonte de una bodega que hoy está cerrada (se paga solo si se abre). " +
+    "<b>Fijo atribuible</b> = costo fijo del nodo × (m3 de esta demanda / m3 que mueve el nodo): reparto proporcional al volumen, no un costo adicional. Las rutas no habilitadas en el escenario se marcan como forzadas.";
+  return {R: R, z: z, f: f, o: o, V: V, t: t, filas: filas};
 }
-function dibujarSim(){
-  if (!ULT) return;
-  var tot = {}; MODOS.forEach(function(m){ tot[m] = ULT[m].costos.total; });
-  var mejorAB = tot.A <= tot.B ? "A" : "B", minAll = Math.min.apply(null, MODOS.map(function(m){ return tot[m]; }));
-  $("sim-tiles").innerHTML = MODOS.map(function(m){ var r = ULT[m], c = r.costos, best = m === mejorAB;
-    return '<div class="tile' + (best ? " best" : "") + '"><div class="lab">' + NOMBRE_MODO[m] + (best ? ' <span class="badge ok">mejor A vs B</span>' : "") + (tot[m] === minAll ? ' <span class="badge">mínimo</span>' : "") +
-      '</div><div class="val">' + M(c.total) + ' M</div><div class="sub">' + (r.factible ? "" : "NO FACTIBLE · ") + "bodegas: " + (r.abiertas.join(", ") || "ninguna") + '</div>' +
-      '<div class="split"><span>Transp. <b>' + M(c.transporte) + '</b></span><span>Almac. <b>' + M(c.almacenamiento) + '</b></span><span>Fijos <b>' + M(c.fijo_nodos) + "</b></span></div></div>"; }).join("");
-  var eq = tot.B - (tot.A - ULT.A.costos.fijo_be);
-  var reco = ["Entre las dos alternativas planteadas, la mejor es <b>" + NOMBRE_MODO[mejorAB] + "</b>: " + M(Math.abs(tot.A - tot.B)) + " M COP/mes de diferencia (" + M(Math.abs(tot.A - tot.B)*12) + " M COP/año)."];
-  reco.push(eq > 0 ? "La bodega externa empata con el traslado si su costo fijo total es ≤ " + M(eq) + " M COP/mes (hoy " + M(ULT.A.costos.fijo_be) + " M)." : "Aun con costo fijo cero, la bodega externa queda " + M(-eq) + " M COP/mes por encima del traslado a CEDI.");
-  reco.push("Óptimo con cierre: " + M(tot.OPT) + " M COP/mes (bodegas: " + (ULT.OPT.abiertas.join(", ") || "ninguna") + "); frente al Actual con " + SIM.planta_cerrada + " operando: " + (tot.OPT <= tot.ACTUAL ? "ahorra " : "cuesta ") + M(Math.abs(tot.OPT - tot.ACTUAL)) + " M COP/mes.");
-  reco.push("Personalizado: " + M(tot.PERS) + " M COP/mes (" + (tot.PERS - tot.OPT >= 0 ? "+" : "") + M(tot.PERS - tot.OPT) + " M vs óptimo).");
-  var pen = MODOS.filter(function(m){ return ULT[m].costos.penal > 1; });
-  if (pen.length) reco.push("⚠ Déficit de capacidad en: " + pen.map(function(m){ return NOMBRE_MODO[m]; }).join(", ") + ". La penalización infla el costo: amplíe posiciones o active bodegas.");
-  var sobre = []; MODOS.forEach(function(m){ ULT[m].plantas.forEach(function(p){ if (p.util && p.util > 1.0001) sobre.push(NOMBRE_MODO[m] + ": " + p.planta + " al " + PF.format(p.util)); }); });
-  if (sobre.length) reco.push("⚠ Producción sobre la capacidad de planta → " + sobre.join(" · ") + ". Ajuste el reparto de producción.");
-  $("sim-reco").innerHTML = reco.map(function(t){ return "<li>" + t + "</li>"; }).join("");
-  var nb = $("sw-base").value, ncmp = $("sw-comp").value;
-  waterfall("ch-sim-wf", simAPy(ULT[nb].costos), simAPy(ULT[ncmp].costos), NOMBRE_MODO[nb], NOMBRE_MODO[ncmp], $("sw-agr").value);
-  barrasComp("ch-sim-costos", MODOS, MODOS.map(function(m){ return NOMBRE_MODO[m]; }), function(m){ return simAPy(ULT[m].costos); });
-  var r = ULT[MODO_VER], N = Object.keys(r.nodos).map(function(k){ return r.nodos[k]; }).filter(function(n){ return n.capacidad > 0; });
-  plot("ch-sim-util", [{type: "bar", x: N.map(function(n){ return n.id + (n.abierto ? "" : " (cerrada)"); }), y: N.map(function(n){ return n.utilizacion; }),
-    marker: {color: N.map(function(n){ return n.abierto ? (n.deficit > 1 ? css("--crit") : serie(0)) : css("--axis"); })},
-    customdata: N.map(function(n){ return [n.inventario, n.capacidad, n.throughput, n.deficit]; }),
-    hovertemplate: "%{x}<br>%{y:.0%}<br>inventario %{customdata[0]:,.0f} de %{customdata[1]:,.0f} m3<br>despacho %{customdata[2]:,.0f} m3/mes<br>déficit %{customdata[3]:,.0f} m3<extra></extra>"}],
-    {bargap: 0.35, yaxis: {tickformat: ".0%"}, shapes: [{type: "line", xref: "paper", x0: 0, x1: 1, y0: PRM.utilizacion_maxima, y1: PRM.utilizacion_maxima, line: {color: css("--muted"), width: 1}}]});
-  var P = r.plantas.slice().sort(function(a, b){ return a.planta.localeCompare(b.planta); });
-  plot("ch-sim-plantas", [{type: "bar", name: "Producción", x: P.map(function(p){ return p.planta; }), y: P.map(function(p){ return p.m3; }), marker: {color: P.map(function(p){ return p.util > 1 ? css("--crit") : serie(0); })},
-      hovertemplate: "%{x}<br>%{y:,.0f} m3/mes<extra></extra>"},
-    {type: "scatter", mode: "markers", name: "Capacidad", x: P.map(function(p){ return p.planta; }), y: P.map(function(p){ return p.capacidad; }), marker: {symbol: "line-ew-open", size: 30, color: css("--ink"), line: {width: 3}},
-      hovertemplate: "%{x}<br>capacidad %{y:,.0f} m3/mes<extra></extra>"}], {bargap: 0.4, yaxis: {title: {text: "m3 / mes"}}});
-  // mapa del simulador
-  var vista = $("sm-vista").value, merc = $("sm-merc").value, Z = SIM.zonas_geo, nodosG = {};
-  SIM.almacenes.forEach(function(n){ nodosG[n.id] = n; });
-  var fm = function(f){ return merc === "T" ? 1 : merc === "E" ? f.pE : 1 - f.pE; };
-  var lineas = [], puntos = [], agg = {};
-  if (vista === "xi"){
-    r.fx.forEach(function(f){ if (f.planta === f.almacen) return; var o = nodosG[f.planta], d = nodosG[f.almacen]; if (!o || !d) return;
-      var pe = 0, tt = 0; r.fy.forEach(function(y){ if (y.almacen === f.almacen && y.planta === f.planta){ pe += y.m3 * y.pE; tt += y.m3; } });
-      var share = merc === "T" ? 1 : merc === "E" ? (tt ? pe / tt : 0) : (tt ? 1 - pe / tt : 1), m3 = f.m3 * share; if (m3 < 0.5) return;
-      lineas.push({olat: o.lat, olon: o.lon, dlat: d.lat, dlon: d.lon, m3: m3, color: colorNodo(f.planta), hover: "<b>" + f.planta + " → " + f.almacen + "</b><br>" + NF.format(m3) + " m3/mes · " + M((f.terc + f.prop) * share) + " M COP/mes<br>flota propia " + PF.format(f.s)}); });
-  } else {
-    r.fy.forEach(function(f){ var oid = vista === "cedi" ? f.almacen : f.planta, k = oid + "|" + f.zona, m3 = f.m3 * fm(f); if (m3 < 0.5) return;
-      var a = agg[k] = agg[k] || {o: oid, z: f.zona, m3: 0, costo: 0}; a.m3 += m3; a.costo += f.costo * fm(f); });
-    Object.keys(agg).forEach(function(k){ var a = agg[k], o = nodosG[a.o], z = Z[a.z]; if (!o || !z) return;
-      lineas.push({olat: o.lat, olon: o.lon, dlat: z[0], dlon: z[1], m3: a.m3, color: colorNodo(a.o), hover: "<b>" + a.o + " → " + esc(a.z) + "</b><br>" + NF.format(a.m3) + " m3/mes · " + M(a.costo) + " M COP/mes"}); });
-    var pz = {}; Object.keys(agg).forEach(function(k){ var a = agg[k]; pz[a.z] = (pz[a.z] || 0) + a.m3; });
-    puntos = Object.keys(pz).filter(function(z){ return Z[z]; }).map(function(z){ return {lat: Z[z][0], lon: Z[z][1], m3: pz[z], color: css("--ink2"), hover: esc(z) + "<br>" + NF.format(pz[z]) + " m3/mes"}; });
-  }
-  var usados = {}; lineas.forEach(function(l, i){}); r.fx.forEach(function(f){ usados[f.planta] = 1; usados[f.almacen] = 1; });
-  var nodosMapa = SIM.almacenes.filter(function(n){ return usados[n.id] && r.nodos[n.id] && r.nodos[n.id].abierto || (r.nodos[n.id] && r.nodos[n.id].throughput > 0); })
-    .map(function(n){ return {id: n.id, nombre: n.nombre, lat: n.lat, lon: n.lon, tipo: n.es_planta ? "planta" : (n.tipo === "propio" ? "cedi" : n.tipo === "bodega_externa_actual" ? "bodega_externa" : n.tipo), cerrada: false}; });
-  dibujarMapa("sm-mapa", lineas, puntos, nodosMapa, $("sm-base").value, "co");
-  var orig = Array.from(new Set(lineas.map(function(l){ return l.color; })));
-  leyenda("sm-ley", Object.keys(usados).filter(function(id){ return nodosG[id]; }).map(function(id){ return [id, colorNodo(id)]; }));
-  tabla("sim-tras", [{t: "Planta", k: "planta"}, {t: "Almacén", k: "almacen"}, {t: "m3/mes", k: "m3", n: 1, sum: 1}, {t: "% flota propia", k: "s", n: 1, fmt: function(v){ return v == null ? "" : PF.format(v); }},
-    {t: "Terceros M", k: "terc", n: 1, sum: 1, fmt: function(v){ return NF1.format(v/1e6); }}, {t: "Flota propia M", k: "prop", n: 1, sum: 1, fmt: function(v){ return NF1.format(v/1e6); }}],
-    r.fx.filter(function(f){ return f.planta !== f.almacen; }), {total: 1});
-  var ag = {};
-  r.fy.forEach(function(f){ var k = f.almacen + "|" + f.zona; ag[k] = ag[k] || {almacen: f.almacen, zona: f.zona, m3: 0, E: 0, costo: 0}; ag[k].m3 += f.m3; ag[k].E += f.m3 * f.pE; ag[k].costo += f.costo; });
-  tabla("sim-dist", [{t: "Almacén", k: "almacen"}, {t: "Zona", k: "zona"}, {t: "m3/mes", k: "m3", n: 1, sum: 1}, {t: "Exportación m3", k: "E", n: 1, sum: 1}, {t: "Costo M COP/mes", k: "costo", n: 1, sum: 1, fmt: function(v){ return NF1.format(v/1e6); }}],
-    Object.keys(ag).map(function(k){ return ag[k]; }), {total: 1});
+renderers.val = function(){ if (!$("v-esc").options.length || desact.val){ opcionesValidador(); desact.val = 0;
+    ["v-esc", "v-f"].forEach(function(i){ $(i).onchange = function(){ opcionesValidador(); rutas(); }; }); $("v-z").onchange = function(){ opcionesValidador(); rutas(); };
+    $("v-cli").onchange = function(){}; $("v-run").onclick = rutas; $("v-marg").onclick = marginal; }
+  rutas(); };
+function marginal(){
+  var x = rutas(), R = x.R; if (R.res.tipo === "historico"){ $("v-mest").textContent = "El escenario Actual es observado (no optimizado): elija un escenario optimizado o simulado."; return; }
+  $("v-mest").textContent = "Optimizando (" + (x.filas.length + 2) + " corridas)..."; $("v-marg").disabled = true;
+  setTimeout(function(){ highs().then(function(h){ setTimeout(function(){ try {
+    var p0 = clone(R.prm); Object.keys(p0.nodos).forEach(function(n){ var m = p0.nodos[n].modo; if (m === "opcional" || m === "forzado") p0.nodos[n].modo = R.res.abiertos[n] ? "forzado" : "cerrado"; });
+    delete p0.extra; var b0 = MotorRed.resolver(h, BASE, p0, {gap: 1e-9, tiempo: 240}), filas = [];
+    var corr = function(nodo, nombre){ var p = clone(p0); p.extra = {z: x.z, familia: x.f, planta: x.o, t: x.t, m3: x.V, nodo: nodo};
+      var r = MotorRed.resolver(h, BASE, p, {gap: 1e-9, tiempo: 240}); var dm = r.objetivo != null && b0.objetivo != null ? r.objetivo - b0.objetivo : null;
+      filas.push({alt: nombre, estado: r.estado, marg: dm, unit: dm != null ? dm / x.V : null, pen: r.costos ? (r.costos["Total penalizaciones"] - b0.costos["Total penalizaciones"]) : null}); };
+    corr(null, "El modelo decide la mejor ruta");
+    x.filas.forEach(function(fl){ if (fl.factible.indexOf("cerrada") >= 0) return; corr(fl.w, "Forzar atención desde " + NODOS[fl.w].id); });
+    tabla("v-mtab", [{t: "Alternativa", k: "alt"}, {t: "Estado", k: "estado"}, {t: "Costo marginal COP", k: "marg", n: 1}, {t: "COP/m3", k: "unit", n: 1}, {t: "Cambio en penalizaciones", k: "pen", n: 1}], filas);
+    $("v-mest").textContent = "Listo. Base: " + b0.estado + ".";
+  } catch (e) { $("v-mest").textContent = "Error: " + e.message; } $("v-marg").disabled = false; }, 30); }); }, 30);
 }
-renderers.simulador = function(){ if (!PRM){ simReset(); correrSim(); } else dibujarSim(); };
-$("sim-run").onclick = correrSim;
-$("sim-reset").onclick = function(){ simReset(); correrSim(); };
 
-/* ---------------------------------------------------------------- METODOLOGIA */
-renderers.metodologia = function(){
-  tabla("tb-escenarios", [{t: "Id", k: "id"}, {t: "Escenario", k: "nombre"}, {t: "Tipo", k: "tipo"}, {t: "Producción", k: "produccion"}, {t: "Planta cerrada", k: "cerrar_planta"},
-    {t: "Bodegas candidatas", k: "bodegas_candidatas"}, {t: "Traslados limitados", k: "limitar_traslados_asis"}, {t: "Bodega actual", k: "bodega_actual"}], D.escenarios_def);
-  $("met-datos").innerHTML = D.metodologia.map(function(t){ return "<li>" + esc(t) + "</li>"; }).join("");
-  tabla("tb-param", [{t: "Parámetro", k: "p"}, {t: "Valor", k: "v"}], D.parametros);
-};
+/* ======================================================== 7 METODOLOGIA */
+renderers.met = function(){ if ($("met").innerHTML) return; $("met").innerHTML = D.metodologia_html; };
 
-var inicial = "resumen";
-try { inicial = localStorage.getItem("red_tab") || "resumen"; } catch(e) {}
+var inicial = "resumen"; try { inicial = localStorage.getItem("red3_tab") || "resumen"; } catch (e) {}
 (document.querySelector('#tabs button[data-tab="' + inicial + '"]') || document.querySelector("#tabs button")).click();
 })();
 </script>
